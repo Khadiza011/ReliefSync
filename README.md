@@ -83,4 +83,3 @@ The main goal of this project is to provide a centralized platform where disaste
 
 ---
 
-## 🗂️ Project Structure
