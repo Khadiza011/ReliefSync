@@ -1,7 +1,9 @@
 const db = require("../config/db");
 
 
-// Get all relief requests
+// ===============================
+// GET ALL RELIEF REQUESTS
+// ===============================
 
 const getAllRequests = (req, res) => {
 
@@ -14,6 +16,7 @@ const getAllRequests = (req, res) => {
             rr.status,
             rr.requested_at,
             rr.notes,
+
             s.shelter_name,
             s.district,
             s.upazila
@@ -28,15 +31,16 @@ const getAllRequests = (req, res) => {
 
 
 
-    db.query(sql, (err, result)=>{
+    db.query(sql, (err, result) => {
 
 
-        if(err){
+        if (err) {
 
             console.log(err);
 
             return res.status(500).json({
-                message:"Database error"
+                message: "Database error",
+                error: err.sqlMessage
             });
 
         }
@@ -50,6 +54,14 @@ const getAllRequests = (req, res) => {
 
 };
 
+
+
+
+
+// ===============================
+// CREATE RELIEF REQUEST
+// ===============================
+
 const createRequest = (req, res) => {
 
 
@@ -62,9 +74,15 @@ const createRequest = (req, res) => {
 
 
 
+    const request_code =
+        "REQ-" + Date.now();
+
+
+
     const sql = `
         INSERT INTO relief_requests
         (
+            request_code,
             shelter_id,
             priority,
             status,
@@ -72,19 +90,31 @@ const createRequest = (req, res) => {
             notes
         )
 
-        VALUES (?, ?, 'REQUESTED', ?, ?)
+        VALUES
+        (
+            ?,
+            ?,
+            ?,
+            'REQUESTED',
+            ?,
+            ?
+        )
     `;
 
 
 
     db.query(
+
         sql,
+
         [
+            request_code,
             shelter_id,
             priority,
             requested_by,
             notes
         ],
+
 
         (err, result)=>{
 
@@ -93,27 +123,41 @@ const createRequest = (req, res) => {
 
                 console.log(err);
 
+
                 return res.status(500).json({
-                    message:"Database error"
+
+                    message:"Database error",
+
+                    error: err.sqlMessage
+
                 });
 
             }
+
 
 
             res.json({
 
                 message:"Relief request created successfully",
 
-                request_id: result.insertId
+                request_id: result.insertId,
+
+                request_code: request_code
 
             });
 
 
+
         }
+
     );
 
 
 };
+
+
+
+
 
 module.exports = {
 

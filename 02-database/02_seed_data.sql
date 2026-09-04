@@ -127,3 +127,22 @@ VALUES
     FALSE,
     'CHILD'
 );
+
+INSERT INTO users
+(
+    role_id,
+    full_name,
+    email,
+    password_hash,
+    phone,
+    status
+)
+VALUES
+(
+    1,
+    'Admin User',
+    'admin@reliefsync.com',
+    '123456',
+    '01700000000',
+    'ACTIVE'
+);

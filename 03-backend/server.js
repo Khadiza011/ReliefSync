@@ -12,6 +12,8 @@ const familyRoutes = require("./routes/familyRoutes");
 const inventoryRoutes = require("./routes/inventoryRoutes");
 const disasterRoutes = require("./routes/disasterRoutes");
 const reliefRequestRoutes = require("./routes/reliefRequestRoutes");
+const distributionRoutes = require("./routes/distributionRoutes");
+const distributionItemRoutes = require("./routes/distributionItemRoutes");
 
 const app = express();
 
@@ -34,14 +36,12 @@ app.get("/", (req,res)=>{
 // API Routes
 
 app.use("/api/shelters", shelterRoutes);
-
 app.use("/api/families", familyRoutes);
-
 app.use("/api/inventory", inventoryRoutes);
-
 app.use("/api/disasters", disasterRoutes);
-
 app.use("/api/requests", reliefRequestRoutes);
+app.use("/api/distributions", distributionRoutes);
+app.use("/api/distribution-items",distributionItemRoutes);
 
 
 const PORT = process.env.PORT || 5000;

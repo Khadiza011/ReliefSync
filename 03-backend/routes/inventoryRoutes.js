@@ -4,13 +4,13 @@ const router = express.Router();
 
 
 const {
-    getInventory
+    getInventory,
+    reduceInventory
 } = require("../controllers/inventoryController");
 
 
-
 router.get("/", getInventory);
-
+router.put("/reduce", reduceInventory);
 
 
 module.exports = router;

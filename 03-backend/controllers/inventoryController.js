@@ -47,8 +47,72 @@ const getInventory = (req, res) => {
 
 };
 
+const reduceInventory = (req,res)=>{
+
+    const {
+        shelter_id,
+        item_id,
+        quantity
+    } = req.body;
+
+
+    const sql = `
+        UPDATE shelter_inventory
+
+        SET quantity = quantity - ?
+
+        WHERE shelter_id = ?
+
+        AND item_id = ?
+
+        AND quantity >= ?
+    `;
+
+
+    db.query(
+        sql,
+        [
+            quantity,
+            shelter_id,
+            item_id,
+            quantity
+        ],
+
+        (err,result)=>{
+
+
+            if(err){
+
+                console.log(err);
+
+                return res.status(500).json({
+                    message:"Database error",
+                    error:err.sqlMessage
+                });
+
+            }
+
+
+            if(result.affectedRows === 0){
+
+                return res.status(400).json({
+                    message:"Insufficient stock or item not found"
+                });
+
+            }
+
+
+            res.json({
+                message:"Inventory reduced successfully"
+            });
+
+        }
+    );
+
+};
 
 
 module.exports = {
-    getInventory
+    getInventory,
+    reduceInventory
 };
