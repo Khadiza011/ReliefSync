@@ -115,3 +115,7 @@ CREATE TABLE IF NOT EXISTS assignments (
         REFERENCES users(user_id)
         ON DELETE SET NULL
 );
+
+ALTER TABLE volunteer_skills
+ADD CONSTRAINT unique_volunteer_skill
+UNIQUE(volunteer_id, skill_id);

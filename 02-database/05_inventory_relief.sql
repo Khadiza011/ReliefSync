@@ -206,7 +206,37 @@ CREATE TABLE IF NOT EXISTS relief_request_items (
         REFERENCES items(item_id)
 );
 
+ALTER TABLE relief_request_items
+ADD COLUMN request_item_id BIGINT UNSIGNED FIRST;
 
+ALTER TABLE relief_request_items
+DROP FOREIGN KEY fk_request_item_item;
+
+ALTER TABLE relief_request_items
+DROP FOREIGN KEY fk_request_item_request;
+
+ALTER TABLE relief_request_items
+DROP PRIMARY KEY;
+
+ALTER TABLE relief_request_items
+MODIFY COLUMN request_item_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+ADD PRIMARY KEY(request_item_id);
+
+ALTER TABLE relief_request_items
+ADD UNIQUE(request_id,item_id);
+
+ALTER TABLE relief_request_items
+ADD CONSTRAINT fk_request_item_item
+FOREIGN KEY (item_id)
+REFERENCES items(item_id)
+ON DELETE CASCADE;
+
+
+ALTER TABLE relief_request_items
+ADD CONSTRAINT fk_request_item_request
+FOREIGN KEY (request_id)
+REFERENCES relief_requests(request_id)
+ON DELETE CASCADE;
 -- ============================================
 -- 7. DISTRIBUTIONS
 -- A request may have multiple distributions
@@ -267,3 +297,50 @@ CREATE TABLE IF NOT EXISTS distribution_items (
         FOREIGN KEY (item_id)
         REFERENCES items(item_id)
 );
+
+ALTER TABLE distribution_items
+ADD COLUMN request_item_id BIGINT UNSIGNED AFTER distribution_id;
+
+ALTER TABLE distribution_items
+ADD CONSTRAINT fk_distribution_request_item
+FOREIGN KEY (request_item_id)
+REFERENCES relief_request_items(request_item_id)
+ON DELETE CASCADE;
+
+ALTER TABLE distribution_items
+DROP FOREIGN KEY fk_dist_item_distribution;
+
+ALTER TABLE distribution_items
+DROP FOREIGN KEY fk_dist_item_item;
+
+ALTER TABLE distribution_items
+DROP PRIMARY KEY;
+
+ALTER TABLE distribution_items
+ADD COLUMN distribution_item_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY FIRST;
+
+ALTER TABLE distribution_items
+ADD UNIQUE(distribution_id, request_item_id);
+
+ALTER TABLE distribution_items
+ADD CONSTRAINT fk_dist_item_distribution
+FOREIGN KEY (distribution_id)
+REFERENCES distributions(distribution_id)
+ON DELETE CASCADE;
+
+ALTER TABLE distribution_items
+ADD CONSTRAINT fk_dist_item_item
+FOREIGN KEY (item_id)
+REFERENCES items(item_id)
+ON DELETE CASCADE;
+
+ALTER TABLE distribution_items
+MODIFY request_item_id BIGINT UNSIGNED NOT NULL;
+
+ALTER TABLE distributions
+MODIFY status ENUM(
+    'PENDING',
+    'COMPLETED',
+    'CANCELLED'
+)
+NOT NULL DEFAULT 'PENDING';

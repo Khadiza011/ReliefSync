@@ -155,7 +155,110 @@ const createRequest = (req, res) => {
 
 };
 
+// ===============================
+// UPDATE RELIEF REQUEST STATUS
+// ===============================
 
+const updateRequestStatus = (req,res)=>{
+
+
+    const {
+
+        request_id,
+        status
+
+    } = req.body;
+
+
+
+    const allowedStatus = [
+
+        "REQUESTED",
+        "APPROVED",
+        "DISTRIBUTED",
+        "COMPLETED",
+        "CANCELLED"
+
+    ];
+
+
+
+    if(!allowedStatus.includes(status)){
+
+
+        return res.status(400).json({
+
+            message:"Invalid request status"
+
+        });
+
+
+    }
+
+
+
+    const sql = `
+
+        UPDATE relief_requests
+
+        SET status = ?
+
+        WHERE request_id = ?
+
+    `;
+
+
+
+    db.query(
+
+        sql,
+
+        [
+            status,
+            request_id
+        ],
+
+        (err,result)=>{
+
+
+            if(err){
+
+                return res.status(500).json({
+
+                    message:"Database error",
+                    error:err.message
+
+                });
+
+            }
+
+
+
+            if(result.affectedRows === 0){
+
+                return res.status(404).json({
+
+                    message:"Relief request not found"
+
+                });
+
+            }
+
+
+
+            res.json({
+
+                message:"Relief request status updated"
+
+            });
+
+
+        }
+
+    );
+
+
+};
 
 
 
@@ -163,6 +266,8 @@ module.exports = {
 
     getAllRequests,
 
-    createRequest
+    createRequest,
+
+    updateRequestStatus
 
 };

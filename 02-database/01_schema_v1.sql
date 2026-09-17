@@ -65,6 +65,16 @@ CREATE TABLE `families` (
   `registered_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+ALTER TABLE families
+MODIFY COLUMN status
+ENUM(
+    'NEEDS_SHELTER',
+    'WAITING_FOR_SHELTER',
+    'SHELTERED',
+    'RELOCATED',
+    'CLOSED'
+)
+DEFAULT 'NEEDS_SHELTER';
 -- --------------------------------------------------------
 
 --
@@ -138,7 +148,16 @@ CREATE TABLE `shelters` (
   `created_by` bigint(20) UNSIGNED DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ;
-
+ALTER TABLE shelters
+MODIFY COLUMN operational_status 
+ENUM(
+    'OPEN',
+    'FULL',
+    'TEMPORARILY_CLOSED',
+    'DAMAGED',
+    'EVACUATING'
+)
+DEFAULT 'OPEN';
 -- --------------------------------------------------------
 
 --
@@ -394,6 +413,8 @@ ALTER TABLE `member_special_needs`
 ALTER TABLE `shelters`
   ADD CONSTRAINT `fk_shelter_creator` FOREIGN KEY (`created_by`) REFERENCES `users` (`user_id`);
 
+ALTER TABLE shelters
+ADD current_occupancy INT DEFAULT 0 ;
 --
 -- Constraints for table `shelter_admissions`
 --

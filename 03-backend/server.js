@@ -14,6 +14,10 @@ const disasterRoutes = require("./routes/disasterRoutes");
 const reliefRequestRoutes = require("./routes/reliefRequestRoutes");
 const distributionRoutes = require("./routes/distributionRoutes");
 const distributionItemRoutes = require("./routes/distributionItemRoutes");
+const syncRoutes = require("./routes/syncRoutes");
+const medicalRoutes = require("./routes/medicalRoutes");
+const volunteerRoutes = require("./routes/volunteerRoutes");
+const reliefRequestItemRoutes = require("./routes/reliefRequestItemRoutes");
 
 const app = express();
 
@@ -42,6 +46,13 @@ app.use("/api/disasters", disasterRoutes);
 app.use("/api/requests", reliefRequestRoutes);
 app.use("/api/distributions", distributionRoutes);
 app.use("/api/distribution-items",distributionItemRoutes);
+app.use("/api/sync", syncRoutes);
+app.use("/api/medical", medicalRoutes);
+app.use("/api/volunteers", volunteerRoutes);
+app.use(
+    "/api/request-items",
+    reliefRequestItemRoutes
+);
 
 
 const PORT = process.env.PORT || 5000;
