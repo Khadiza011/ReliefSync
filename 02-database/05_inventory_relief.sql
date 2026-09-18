@@ -120,6 +120,22 @@ CREATE TABLE IF NOT EXISTS inventory_transactions (
         ON DELETE SET NULL
 );
 
+ALTER TABLE inventory_transactions
+DROP FOREIGN KEY fk_txn_user;
+
+ALTER TABLE inventory_transactions
+MODIFY created_by BIGINT UNSIGNED NOT NULL;
+
+ALTER TABLE inventory_transactions
+
+ADD CONSTRAINT fk_txn_user
+
+FOREIGN KEY (created_by)
+
+REFERENCES users(user_id)
+
+ON DELETE RESTRICT;
+
 
 -- ============================================
 -- 5. RELIEF REQUESTS
@@ -344,3 +360,44 @@ MODIFY status ENUM(
     'CANCELLED'
 )
 NOT NULL DEFAULT 'PENDING';
+
+ALTER TABLE distributions
+ADD approved_by BIGINT UNSIGNED NULL,
+ADD approved_at TIMESTAMP NULL;
+
+ALTER TABLE distributions
+DROP FOREIGN KEY fk_distribution_user;
+
+ALTER TABLE distributions
+MODIFY distributed_by BIGINT UNSIGNED NOT NULL;
+
+ALTER TABLE distributions
+ADD CONSTRAINT fk_distribution_user
+FOREIGN KEY (distributed_by)
+REFERENCES users(user_id)
+ON DELETE RESTRICT;
+
+ALTER TABLE distributions
+ADD CONSTRAINT fk_distribution_approved_by
+FOREIGN KEY (approved_by)
+REFERENCES users(user_id)
+ON DELETE SET NULL;
+
+ALTER TABLE relief_requests
+DROP FOREIGN KEY fk_request_requested_by;
+
+ALTER TABLE relief_requests
+MODIFY requested_by BIGINT UNSIGNED NOT NULL;
+
+ALTER TABLE relief_requests
+ADD CONSTRAINT fk_request_requested_by
+FOREIGN KEY (requested_by)
+REFERENCES users(user_id)
+ON DELETE RESTRICT;
+
+ALTER TABLE distributions
+DROP FOREIGN KEY fk_distribution_approved_by;
+
+ALTER TABLE distributions
+DROP COLUMN approved_by,
+DROP COLUMN approved_at;

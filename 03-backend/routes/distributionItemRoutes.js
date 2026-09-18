@@ -7,9 +7,15 @@ const {
     addDistributionItem
 } = require("../controllers/distributionItemController");
 
+const {verifyToken}=require("../middleware/authMiddleware");
+const {checkRole}=require("../middleware/roleMiddleware");
 
-
-router.post("/", addDistributionItem);
+router.post(
+"/",
+verifyToken,
+checkRole(1,3),
+addDistributionItem
+);
 
 
 

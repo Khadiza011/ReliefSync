@@ -1,15 +1,18 @@
 const db = require("../config/db");
 
 
-// ===============================
-// GET ALL RELIEF REQUESTS
-// ===============================
 
-const getAllRequests = (req, res) => {
+// =================================
+// GET ALL RELIEF REQUESTS
+// =================================
+
+const getAllRequests = (req,res)=>{
 
 
     const sql = `
+
         SELECT
+
             rr.request_id,
             rr.request_code,
             rr.priority,
@@ -17,30 +20,38 @@ const getAllRequests = (req, res) => {
             rr.requested_at,
             rr.notes,
 
+            rr.requested_by,
+            rr.approved_by,
+            rr.approved_at,
+
             s.shelter_name,
             s.district,
             s.upazila
 
+
         FROM relief_requests rr
 
+
         JOIN shelters s
+
         ON rr.shelter_id = s.shelter_id
 
+
         ORDER BY rr.requested_at DESC
+
     `;
 
 
 
-    db.query(sql, (err, result) => {
+    db.query(sql,(err,result)=>{
 
 
-        if (err) {
-
-            console.log(err);
+        if(err){
 
             return res.status(500).json({
-                message: "Database error",
-                error: err.sqlMessage
+
+                message:"Database error"
+
             });
 
         }
@@ -58,106 +69,265 @@ const getAllRequests = (req, res) => {
 
 
 
-// ===============================
+// =================================
 // CREATE RELIEF REQUEST
-// ===============================
+// =================================
 
-const createRequest = (req, res) => {
+const createRequest = (req,res)=>{
+
+
+    console.log("CREATE REQUEST CONTROLLER HIT");
 
 
     const {
+
         shelter_id,
         priority,
-        requested_by,
         notes
+
     } = req.body;
 
 
 
-    const request_code =
+    const user_id = req.user.user_id;
+    const role_id = req.user.role_id;
+
+
+
+    if(!shelter_id || !priority){
+
+        return res.status(400).json({
+
+            message:"Shelter and priority required"
+
+        });
+
+    }
+
+
+
+    const allowedPriority=[
+
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+
+    ];
+
+
+
+    if(!allowedPriority.includes(priority)){
+
+
+        return res.status(400).json({
+
+            message:"Invalid priority"
+
+        });
+
+    }
+
+
+
+
+    const insertRequest = ()=>{
+
+
+        const request_code =
         "REQ-" + Date.now();
 
 
 
-    const sql = `
-        INSERT INTO relief_requests
-        (
-            request_code,
-            shelter_id,
-            priority,
-            status,
-            requested_by,
-            notes
-        )
+        const sql = `
 
-        VALUES
-        (
-            ?,
-            ?,
-            ?,
-            'REQUESTED',
-            ?,
-            ?
-        )
-    `;
+            INSERT INTO relief_requests
+
+            (
+
+                request_code,
+                shelter_id,
+                priority,
+                status,
+                requested_by,
+                notes
+
+            )
+
+            VALUES(?,?,?,?,?,?)
+
+        `;
 
 
 
-    db.query(
+        db.query(
 
-        sql,
+            sql,
 
-        [
-            request_code,
-            shelter_id,
-            priority,
-            requested_by,
-            notes
-        ],
+            [
 
+                request_code,
+                shelter_id,
+                priority,
+                "REQUESTED",
+                user_id,
+                notes || null
 
-        (err, result)=>{
-
-
-            if(err){
-
-                console.log(err);
+            ],
 
 
-                return res.status(500).json({
+            (err,result)=>{
 
-                    message:"Database error",
 
-                    error: err.sqlMessage
+                if(err){
+
+                    console.log(err);
+
+                    return res.status(500).json({
+
+                        message:"Database error"
+
+                    });
+
+                }
+
+
+
+                return res.status(201).json({
+
+                    message:
+                    "Relief request created successfully",
+
+                    request_id:
+                    result.insertId,
+
+                    request_code
+
 
                 });
+
+
+            }
+
+        );
+
+
+    };
+
+
+
+
+
+
+    // ADMIN
+
+    if(role_id===1){
+
+        return insertRequest();
+
+    }
+
+
+
+
+
+    // SHELTER MANAGER
+
+    if(role_id===2){
+
+
+        const checkSql = `
+
+            SELECT shelter_id
+
+            FROM shelter_managers
+
+            WHERE user_id=?
+
+            AND shelter_id=?
+
+        `;
+
+
+
+        db.query(
+
+            checkSql,
+
+            [
+
+                user_id,
+                shelter_id
+
+            ],
+
+
+            (err,result)=>{
+
+
+                if(err){
+
+                    console.log(err);
+
+                    return res.status(500).json({
+
+                        message:"Database error"
+
+                    });
+
+                }
+
+
+
+
+                if(result.length===0){
+
+
+                    return res.status(403).json({
+
+                        message:
+                        "You cannot create request for this shelter"
+
+                    });
+
+
+                }
+
+
+
+
+
+                insertRequest();
+
 
             }
 
 
+        );
 
-            res.json({
 
-                message:"Relief request created successfully",
+        return;
 
-                request_id: result.insertId,
-
-                request_code: request_code
-
-            });
+    }
 
 
 
-        }
 
-    );
+
+    return res.status(403).json({
+
+        message:"Access denied"
+
+    });
 
 
 };
 
-// ===============================
-// UPDATE RELIEF REQUEST STATUS
-// ===============================
+
+// =================================
+// UPDATE STATUS
+// =================================
+
 
 const updateRequestStatus = (req,res)=>{
 
@@ -171,12 +341,29 @@ const updateRequestStatus = (req,res)=>{
 
 
 
-    const allowedStatus = [
+    const user_id=req.user.user_id;
 
-        "REQUESTED",
+    const role_id=req.user.role_id;
+
+
+
+    if(!request_id || !status){
+
+        return res.status(400).json({
+
+            message:"Request id and status required"
+
+        });
+
+    }
+
+
+
+
+
+    const allowedStatus=[
+
         "APPROVED",
-        "DISTRIBUTED",
-        "COMPLETED",
         "CANCELLED"
 
     ];
@@ -188,22 +375,42 @@ const updateRequestStatus = (req,res)=>{
 
         return res.status(400).json({
 
-            message:"Invalid request status"
+            message:
+            "Invalid status update"
 
         });
-
 
     }
 
 
 
+
+
+    // only admin / relief manager
+
+    if(role_id!==1 && role_id!==3){
+
+
+        return res.status(403).json({
+
+            message:
+            "You cannot update request status"
+
+        });
+
+    }
+
+
+
+
+
     const sql = `
 
-        UPDATE relief_requests
+        SELECT status
 
-        SET status = ?
+        FROM relief_requests
 
-        WHERE request_id = ?
+        WHERE request_id=?
 
     `;
 
@@ -213,10 +420,7 @@ const updateRequestStatus = (req,res)=>{
 
         sql,
 
-        [
-            status,
-            request_id
-        ],
+        [request_id],
 
         (err,result)=>{
 
@@ -225,8 +429,7 @@ const updateRequestStatus = (req,res)=>{
 
                 return res.status(500).json({
 
-                    message:"Database error",
-                    error:err.message
+                    message:"Database error"
 
                 });
 
@@ -234,11 +437,11 @@ const updateRequestStatus = (req,res)=>{
 
 
 
-            if(result.affectedRows === 0){
+            if(result.length===0){
 
                 return res.status(404).json({
 
-                    message:"Relief request not found"
+                    message:"Request not found"
 
                 });
 
@@ -246,28 +449,117 @@ const updateRequestStatus = (req,res)=>{
 
 
 
-            res.json({
 
-                message:"Relief request status updated"
 
-            });
+            const currentStatus=result[0].status;
+
+
+
+            if(
+
+                currentStatus==="COMPLETED" ||
+                currentStatus==="CANCELLED"
+
+            ){
+
+                return res.status(400).json({
+
+                    message:
+                    "Request already closed"
+
+                });
+
+            }
+
+
+
+
+
+
+            const updateSql = `
+
+            UPDATE relief_requests
+
+            SET
+
+            status=?,
+
+            approved_by=?,
+
+            approved_at=NOW()
+
+            WHERE request_id=?
+
+            `;
+
+
+
+
+            db.query(
+
+                updateSql,
+
+                [
+
+                    status,
+                    user_id,
+                    request_id
+
+                ],
+
+
+                (err)=>{
+
+
+                    if(err){
+
+                        return res.status(500).json({
+
+                            message:
+                            "Database error"
+
+                        });
+
+                    }
+
+
+
+                    res.json({
+
+                        message:
+                        "Request status updated successfully"
+
+                    });
+
+
+
+                }
+
+
+            );
+
 
 
         }
 
+
     );
+
 
 
 };
 
 
 
-module.exports = {
+
+module.exports={
+
 
     getAllRequests,
 
     createRequest,
 
     updateRequestStatus
+
 
 };

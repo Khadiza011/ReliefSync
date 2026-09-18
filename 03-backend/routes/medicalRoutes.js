@@ -13,39 +13,54 @@ const {
 
 } = require("../controllers/medicalController");
 
-// Get all medical teams
-router.get("/teams", getMedicalTeams);
-
-
-// Create medical request
-router.post("/request", createMedicalRequest);
-
-
-// Assign medical team
-router.post(
-    "/assign",
-    assignMedicalSupport
-);
-
-// Get all medical requests
+const {verifyToken}=require("../middleware/authMiddleware");
+const {checkRole}=require("../middleware/roleMiddleware");
 
 router.get(
-    "/requests",
-    getMedicalRequests
+"/teams",
+verifyToken,
+checkRole(1,3),
+getMedicalTeams
 );
 
 
+router.post(
+"/request",
+verifyToken,
+checkRole(1,2,3),
+createMedicalRequest
+);
 
-// Update assignment status
+
+router.post(
+"/assign",
+verifyToken,
+checkRole(1,3),
+assignMedicalSupport
+);
+
+
+router.get(
+"/requests",
+verifyToken,
+checkRole(1,2,3),
+getMedicalRequests
+);
+
 
 router.put(
-    "/assignment/status",
-    updateMedicalAssignmentStatus
+"/assignment/status",
+verifyToken,
+checkRole(1,3),
+updateMedicalAssignmentStatus
 );
 
+
 router.get(
-    "/find-volunteer",
-    findVolunteerBySkill
+"/find-volunteer",
+verifyToken,
+checkRole(1,3),
+findVolunteerBySkill
 );
 
 module.exports = router;

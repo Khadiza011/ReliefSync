@@ -18,6 +18,10 @@ const syncRoutes = require("./routes/syncRoutes");
 const medicalRoutes = require("./routes/medicalRoutes");
 const volunteerRoutes = require("./routes/volunteerRoutes");
 const reliefRequestItemRoutes = require("./routes/reliefRequestItemRoutes");
+const authRoutes = require("./routes/authRoutes");
+const shelterAdmissionRoutes = require("./routes/shelterAdmissionRoutes");
+const donationRoutes = require("./routes/donationRoutes");
+
 
 const app = express();
 
@@ -31,7 +35,7 @@ app.use(express.json());
 // Test
 app.get("/", (req,res)=>{
 
-    res.send("ReliefSync Backend Running");
+     res.send("ReliefSync Backend Running");
 
 });
 
@@ -49,11 +53,10 @@ app.use("/api/distribution-items",distributionItemRoutes);
 app.use("/api/sync", syncRoutes);
 app.use("/api/medical", medicalRoutes);
 app.use("/api/volunteers", volunteerRoutes);
-app.use(
-    "/api/request-items",
-    reliefRequestItemRoutes
-);
-
+app.use( "/api/request-items", reliefRequestItemRoutes);
+app.use("/api/auth", authRoutes);
+app.use("/api/admissions",shelterAdmissionRoutes);
+app.use("/api/donations", donationRoutes);
 
 const PORT = process.env.PORT || 5000;
 

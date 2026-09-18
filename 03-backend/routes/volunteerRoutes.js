@@ -15,55 +15,61 @@ const {
 
 } = require("../controllers/volunteerController");
 
+const {verifyToken}=require("../middleware/authMiddleware");
+const {checkRole}=require("../middleware/roleMiddleware");
 
-
-// Get all volunteers
 router.get(
-    "/",
-    getAllVolunteers
+"/",
+verifyToken,
+checkRole(1,3),
+getAllVolunteers
 );
 
 
-// Get available volunteers
-router.get(
-    "/available",
-    getAvailableVolunteers
-);
-
-
-// Add new volunteer
 router.post(
-    "/",
-    createVolunteer
+"/",
+verifyToken,
+checkRole(1,3),
+createVolunteer
 );
 
 
-// Update volunteer
 router.put(
-    "/:id",
-    updateVolunteer
+"/:id",
+verifyToken,
+checkRole(1,3),
+updateVolunteer
 );
 
 
-// Delete volunteer
 router.delete(
-    "/:id",
-    deleteVolunteer
+"/:id",
+verifyToken,
+checkRole(1,3),
+deleteVolunteer
 );
 
 
-// Assign skill to volunteer
 router.post(
-    "/skill",
-    addVolunteerSkill
+"/skill",
+verifyToken,
+checkRole(1,3),
+addVolunteerSkill
 );
 
 
-// Remove skill from volunteer
 router.delete(
-    "/skill",
-    removeVolunteerSkill
+"/skill",
+verifyToken,
+checkRole(1,3),
+removeVolunteerSkill
 );
 
+router.get(
+"/available",
+verifyToken,
+checkRole(1,3),
+getAvailableVolunteers
+);
 
 module.exports = router;

@@ -373,6 +373,12 @@ ALTER TABLE `shelter_admissions`
   MODIFY `admission_id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
 
 --
+
+ALTER TABLE shelter_admissions
+MODIFY admitted_by BIGINT UNSIGNED NOT NULL;
+
+
+
 -- AUTO_INCREMENT for table `special_need_types`
 --
 ALTER TABLE `special_need_types`
@@ -429,12 +435,82 @@ ALTER TABLE `shelter_admissions`
 ALTER TABLE `shelter_facilities`
   ADD CONSTRAINT `fk_sf_facility` FOREIGN KEY (`facility_id`) REFERENCES `facilities` (`facility_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `fk_sf_shelter` FOREIGN KEY (`shelter_id`) REFERENCES `shelters` (`shelter_id`) ON DELETE CASCADE;
-
 --
 -- Constraints for table `users`
 --
 ALTER TABLE `users`
   ADD CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`role_id`);
+
+ALTER TABLE shelters
+DROP FOREIGN KEY fk_shelter_disaster;
+
+ALTER TABLE shelters
+DROP COLUMN disaster_id,
+DROP COLUMN usable_area_sqm,
+DROP COLUMN contact_person,
+DROP COLUMN contact_phone;
+
+ALTER TABLE shelters
+ADD managed_by BIGINT UNSIGNED NOT NULL
+AFTER created_by ;
+
+ALTER TABLE shelters
+ADD CONSTRAINT fk_shelter_manager
+FOREIGN KEY (managed_by)
+REFERENCES users(user_id)
+ON DELETE RESTRICT;
+
+ALTER TABLE shelters
+DROP COLUMN created_by;
+
+CREATE TABLE shelter_managers (
+
+    id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+
+    shelter_id INT UNSIGNED NOT NULL,
+
+    user_id BIGINT UNSIGNED NOT NULL,
+
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+
+    CONSTRAINT fk_sm_shelter
+    FOREIGN KEY (shelter_id)
+    REFERENCES shelters(shelter_id)
+    ON DELETE CASCADE,
+
+
+    CONSTRAINT fk_sm_user
+    FOREIGN KEY (user_id)
+    REFERENCES users(user_id)
+    ON DELETE RESTRICT,
+
+
+    UNIQUE(user_id)
+
+);
+
+ALTER TABLE shelters
+DROP FOREIGN KEY fk_shelter_manager;
+
+ALTER TABLE shelters
+DROP COLUMN managed_by;
+
+ALTER TABLE shelter_admissions
+DROP FOREIGN KEY fk_admission_user;
+
+ALTER TABLE shelter_admissions
+ADD CONSTRAINT fk_admission_user
+FOREIGN KEY (admitted_by)
+REFERENCES users(user_id)
+ON DELETE RESTRICT;
+
+ALTER TABLE shelter_admissions
+ADD CONSTRAINT fk_admission_user
+FOREIGN KEY (admitted_by)
+REFERENCES users(user_id)
+ON DELETE RESTRICT;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

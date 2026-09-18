@@ -8,8 +8,28 @@ const {
 } = require("../controllers/distributionController");
 
 
+const { 
+    verifyToken 
+} = require("../middleware/authMiddleware");
 
-router.post("/", createDistribution);
+
+const {
+    checkRole
+} = require("../middleware/roleMiddleware");
+
+
+
+router.post(
+
+    "/",
+
+    verifyToken,
+
+    checkRole(1,3),
+
+    createDistribution
+
+);
 
 
 

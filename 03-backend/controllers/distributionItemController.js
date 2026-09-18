@@ -5,7 +5,7 @@ const db = require("../config/db");
 // ADD DISTRIBUTION ITEM
 // =================================
 
-const addDistributionItem = (req, res) => {
+const addDistributionItem = (req,res)=>{
 
 
     const {
@@ -19,7 +19,16 @@ const addDistributionItem = (req, res) => {
 
 
 
-    if(!distribution_id || !request_item_id || !item_id || !quantity){
+    const created_by = req.user.user_id;
+
+
+
+    if(
+        !distribution_id ||
+        !request_item_id ||
+        !item_id ||
+        !quantity
+    ){
 
         return res.status(400).json({
 
@@ -31,7 +40,8 @@ const addDistributionItem = (req, res) => {
 
 
 
-    if(Number(quantity) <= 0){
+
+    if(Number(quantity)<=0){
 
         return res.status(400).json({
 
@@ -43,6 +53,8 @@ const addDistributionItem = (req, res) => {
 
 
 
+
+
     db.beginTransaction((err)=>{
 
 
@@ -50,7 +62,7 @@ const addDistributionItem = (req, res) => {
 
             return res.status(500).json({
 
-                message:"Transaction error"
+                message:"Transaction start failed"
 
             });
 
@@ -58,23 +70,20 @@ const addDistributionItem = (req, res) => {
 
 
 
-        // =================================
-        // CHECK REQUEST ITEM
-        // =================================
 
 
-        const checkRequestSql = `
+        // ===============================
+        // CHECK DISTRIBUTION
+        // ===============================
 
-            SELECT
 
-                request_id,
-                item_id,
-                requested_qty,
-                fulfilled_qty
+        const distributionSql = `
 
-            FROM relief_request_items
+            SELECT distribution_id
 
-            WHERE request_item_id = ?
+            FROM distributions
+
+            WHERE distribution_id = ?
 
         `;
 
@@ -82,69 +91,23 @@ const addDistributionItem = (req, res) => {
 
         db.query(
 
-            checkRequestSql,
+            distributionSql,
 
-            [request_item_id],
+            [distribution_id],
 
-            (err,requestResult)=>{
+            (err,distribution)=>{
 
 
-                if(err){
-
+                if(err)
                     return rollback(res,err);
 
-                }
 
 
-
-                if(requestResult.length === 0){
+                if(distribution.length===0){
 
                     return rollback(res,{
 
-                        message:"Request item not found"
-
-                    });
-
-                }
-
-
-
-                const requestItem = requestResult[0];
-
-
-
-                // Check item match
-
-                if(
-                    Number(requestItem.item_id)
-                    !==
-                    Number(item_id)
-                ){
-
-                    return rollback(res,{
-
-                        message:"Item does not match request item"
-
-                    });
-
-                }
-
-
-
-                // Check requested quantity limit
-
-                if(
-                    Number(requestItem.fulfilled_qty)
-                    +
-                    Number(quantity)
-                    >
-                    Number(requestItem.requested_qty)
-                ){
-
-                    return rollback(res,{
-
-                        message:
-                        "Cannot distribute more than requested quantity"
+                        message:"Distribution not found"
 
                     });
 
@@ -154,529 +117,756 @@ const addDistributionItem = (req, res) => {
 
 
 
-                const request_id = requestItem.request_id;
-
-
-
-
-
-                // =================================
-                // FIND SHELTER
-                // =================================
-
-
-                const shelterSql = `
-
-                    SELECT rr.shelter_id
-
-                    FROM distributions d
-
-                    JOIN relief_requests rr
-
-                    ON d.request_id = rr.request_id
-
-                    WHERE d.distribution_id = ?
-
-                `;
-
-
-
-                db.query(
-
-                    shelterSql,
-
-                    [distribution_id],
-
-                    (err,result)=>{
-
-
-                        if(err){
-
-                            return rollback(res,err);
-
-                        }
-
-
-
-                        if(result.length === 0){
-
-                            return rollback(res,{
-
-                                message:"Distribution not found"
-
-                            });
-
-                        }
-
-
-
-                        const shelter_id = result[0].shelter_id;
-
-
-
-
-
-                        // =================================
-                        // CHECK INVENTORY
-                        // =================================
-
-
-                        const stockSql = `
-
-                            SELECT quantity
-
-                            FROM shelter_inventory
-
-                            WHERE shelter_id = ?
-
-                            AND item_id = ?
-
-                        `;
-
-
-
-                        db.query(
-
-                            stockSql,
-
-                            [
-                                shelter_id,
-                                item_id
-                            ],
-
-                            (err,stock)=>{
-
-
-                                if(err){
-
-                                    return rollback(res,err);
-
-                                }
-
-
-
-                                if(stock.length === 0){
-
-                                    return rollback(res,{
-
-                                        message:
-                                        "Item not available in inventory"
-
-                                    });
-
-                                }
-
-
-
-                                if(
-                                    Number(stock[0].quantity)
-                                    <
-                                    Number(quantity)
-                                ){
-
-                                    return rollback(res,{
-
-                                        message:
-                                        "Insufficient stock"
-
-                                    });
-
-                                }
-
-
-
-
-
-                                // =================================
-                                // REDUCE INVENTORY
-                                // =================================
-
-
-                                const updateInventory = `
-
-                                    UPDATE shelter_inventory
-
-                                    SET quantity = quantity - ?
-
-                                    WHERE shelter_id = ?
-
-                                    AND item_id = ?
-
-                                `;
-
-
-
-                                db.query(
-
-                                    updateInventory,
-
-                                    [
-                                        quantity,
-                                        shelter_id,
-                                        item_id
-                                    ],
-
-                                    (err)=>{
-
-
-                                        if(err){
-
-                                            return rollback(res,err);
-
-                                        }
-
-
-
-
-
-                                        // =================================
-                                        // CHECK EXISTING DISTRIBUTION ITEM
-                                        // =================================
-
-
-                                        const checkDistributionSql = `
-
-                                            SELECT distribution_item_id
-
-                                            FROM distribution_items
-
-                                            WHERE distribution_id = ?
-
-                                            AND request_item_id = ?
-
-                                        `;
-
-
-
-                                        db.query(
-
-                                            checkDistributionSql,
-
-                                            [
-                                                distribution_id,
-                                                request_item_id
-                                            ],
-
-                                            (err,existing)=>{
-
-
-                                                if(err){
-
-                                                    return rollback(res,err);
-
-                                                }
-
-
-
-                                                let query;
-                                                let values;
-
-
-
-                                                if(existing.length > 0){
-
-
-                                                    query = `
-
-                                                        UPDATE distribution_items
-
-                                                        SET quantity = quantity + ?
-
-                                                        WHERE distribution_item_id = ?
-
-                                                    `;
-
-
-                                                    values = [
-
-                                                        quantity,
-
-                                                        existing[0].distribution_item_id
-
-                                                    ];
-
-
-                                                }
-
-                                                else{
-
-
-                                                    query = `
-
-                                                        INSERT INTO distribution_items
-
-                                                        (
-                                                            distribution_id,
-                                                            request_item_id,
-                                                            item_id,
-                                                            quantity
-                                                        )
-
-                                                        VALUES(?,?,?,?)
-
-                                                    `;
-
-
-
-                                                    values = [
-
-                                                        distribution_id,
-                                                        request_item_id,
-                                                        item_id,
-                                                        quantity
-
-                                                    ];
-
-
-                                                }
-
-
-
-
-                                                db.query(
-
-                                                    query,
-
-                                                    values,
-
-                                                    (err,result)=>{
-
-
-                                                        if(err){
-
-                                                            return rollback(res,err);
-
-                                                        }
-
-
-
-
-
-                                                        // =================================
-                                                        // UPDATE FULFILLED QTY
-                                                        // =================================
-
-
-                                                        const updateFulfilled = `
-
-                                                            UPDATE relief_request_items
-
-                                                            SET fulfilled_qty = fulfilled_qty + ?
-
-                                                            WHERE request_item_id = ?
-
-                                                        `;
-
-
-
-                                                        db.query(
-
-                                                            updateFulfilled,
-
-                                                            [
-                                                                quantity,
-                                                                request_item_id
-                                                            ],
-
-                                                            (err)=>{
-
-
-                                                                if(err){
-
-                                                                    return rollback(res,err);
-
-                                                                }
-
-
-
-
-
-                                                                // =================================
-                                                                // UPDATE REQUEST STATUS
-                                                                // =================================
-
-
-                                                                const statusSql = `
-
-                                                                    SELECT
-
-                                                                        SUM(requested_qty) AS total_requested,
-
-                                                                        SUM(fulfilled_qty) AS total_fulfilled
-
-                                                                    FROM relief_request_items
-
-                                                                    WHERE request_id = ?
-
-                                                                `;
-
-
-
-                                                                db.query(
-
-                                                                    statusSql,
-
-                                                                    [request_id],
-
-                                                                    (err,statusResult)=>{
-
-
-                                                                        if(err){
-
-                                                                            return rollback(res,err);
-
-                                                                        }
-
-
-
-                                                                        const totalRequested =
-                                                                        Number(statusResult[0].total_requested);
-
-
-
-                                                                        const totalFulfilled =
-                                                                        Number(statusResult[0].total_fulfilled);
-
-
-
-                                                                        let newStatus;
-
-
-
-                                                                        if(
-                                                                            totalFulfilled >= totalRequested
-                                                                        ){
-
-                                                                            newStatus =
-                                                                            "DELIVERED";
-
-                                                                        }
-
-                                                                        else{
-
-                                                                            newStatus =
-                                                                            "PARTIALLY_DELIVERED";
-
-                                                                        }
-
-
-
-
-
-                                                                        const updateStatusSql = `
-
-                                                                            UPDATE relief_requests
-
-                                                                            SET status = ?
-
-                                                                            WHERE request_id = ?
-
-                                                                        `;
-
-
-
-                                                                        db.query(
-
-                                                                            updateStatusSql,
-
-                                                                            [
-                                                                                newStatus,
-                                                                                request_id
-                                                                            ],
-
-                                                                            (err)=>{
-
-
-                                                                                if(err){
-
-                                                                                    return rollback(res,err);
-
-                                                                                }
-
-
-
-
-                                                                                db.commit((err)=>{
-
-
-                                                                                    if(err){
-
-                                                                                        return rollback(res,err);
-
-                                                                                    }
-
-
-
-                                                                                    res.json({
-
-                                                                                        message:
-                                                                                        "Distribution completed successfully",
-
-                                                                                        request_status:
-                                                                                        newStatus,
-
-                                                                                        distribution_item_id:
-                                                                                        result.insertId || null
-
-                                                                                    });
-
-
-
-                                                                                });
-
-
-
-                                                                            }
-
-                                                                        );
-
-
-
-                                                                    }
-
-                                                                );
-
-
-
-                                                            }
-
-                                                        );
-
-
-
-                                                    }
-
-                                                );
-
-
-
-                                            }
-
-                                        );
-
-
-
-                                    }
-
-                                );
-
-
-
-                            }
-
-                        );
-
-
-
-                    }
-
-                );
-
+                checkRequestItem();
 
 
             }
 
         );
+
+
+
+
+
+
+        function checkRequestItem(){
+
+
+
+            const requestSql = `
+
+                SELECT
+
+                    rr.request_id,
+
+                    rr.status,
+
+                    rri.item_id,
+
+                    rri.requested_qty,
+
+                    rri.fulfilled_qty
+
+
+                FROM relief_request_items rri
+
+
+                JOIN relief_requests rr
+
+                ON rri.request_id = rr.request_id
+
+
+                WHERE rri.request_item_id = ?
+
+            `;
+
+
+
+            db.query(
+
+                requestSql,
+
+                [request_item_id],
+
+
+                (err,result)=>{
+
+
+                    if(err)
+                        return rollback(res,err);
+
+
+
+
+                    if(result.length===0){
+
+                        return rollback(res,{
+
+                            message:"Request item not found"
+
+                        });
+
+                    }
+
+
+
+
+
+                    const requestData=result[0];
+
+
+
+
+
+                    if(
+
+                        requestData.status !== "APPROVED" &&
+
+                        requestData.status !== "PARTIALLY_DELIVERED"
+
+                    ){
+
+                        return rollback(res,{
+
+                            message:
+                            "Request is not ready for distribution"
+
+                        });
+
+                    }
+
+
+
+
+
+                    if(
+
+                        Number(requestData.item_id)
+                        !==
+                        Number(item_id)
+
+                    ){
+
+                        return rollback(res,{
+
+                            message:"Item mismatch"
+
+                        });
+
+                    }
+
+
+
+
+
+                    if(
+
+                        Number(requestData.fulfilled_qty)
+                        +
+                        Number(quantity)
+
+                        >
+
+                        Number(requestData.requested_qty)
+
+                    ){
+
+                        return rollback(res,{
+
+                            message:
+                            "Cannot exceed requested quantity"
+
+                        });
+
+                    }
+
+
+
+
+                    checkDuplicate(requestData);
+
+
+
+                }
+
+            );
+
+
+        }
+
+
+
+
+
+
+        function checkDuplicate(requestData){
+
+
+
+            const duplicateSql = `
+
+                SELECT distribution_item_id
+
+                FROM distribution_items
+
+                WHERE distribution_id=?
+
+                AND request_item_id=?
+
+            `;
+
+
+
+            db.query(
+
+                duplicateSql,
+
+                [
+
+                    distribution_id,
+
+                    request_item_id
+
+                ],
+
+
+                (err,result)=>{
+
+
+                    if(err)
+                        return rollback(res,err);
+
+
+
+
+                    if(result.length>0){
+
+                        return rollback(res,{
+
+                            message:
+                            "Item already distributed"
+
+                        });
+
+                    }
+
+
+
+
+                    updateInventory(requestData);
+
+
+
+                }
+
+            );
+
+
+        }
+
+
+
+
+
+
+
+        function updateInventory(requestData){
+
+
+
+            const inventorySql = `
+
+                SELECT
+
+                    inventory_id,
+
+                    quantity
+
+
+                FROM shelter_inventory
+
+
+                WHERE shelter_id =
+
+                (
+
+                    SELECT shelter_id
+
+                    FROM relief_requests
+
+                    WHERE request_id=?
+
+                )
+
+
+                AND item_id=?
+
+            `;
+
+
+
+            db.query(
+
+                inventorySql,
+
+                [
+
+                    requestData.request_id,
+
+                    item_id
+
+                ],
+
+
+                (err,result)=>{
+
+
+                    if(err)
+                        return rollback(res,err);
+
+
+
+
+                    if(result.length===0){
+
+                        return rollback(res,{
+
+                            message:
+                            "Inventory not found"
+
+                        });
+
+                    }
+
+
+
+
+                    const inventory = result[0];
+
+                    const currentStock =
+                    Number(inventory.quantity);
+
+
+
+                    if(currentStock < Number(quantity)){
+
+
+                        return rollback(res,{
+
+                            message:
+                            "Insufficient inventory"
+
+                        });
+
+                    }
+
+
+
+
+
+                    const newBalance =
+                    currentStock - Number(quantity);
+
+
+
+
+
+                    db.query(
+
+                        `
+
+                        UPDATE shelter_inventory
+
+                        SET quantity=?
+
+                        WHERE inventory_id=?
+
+                        `,
+
+
+                        [
+
+                            newBalance,
+
+                            inventory.inventory_id
+
+                        ],
+
+
+                        (err)=>{
+
+
+                            if(err)
+                                return rollback(res,err);
+
+
+
+
+                            createTransaction(
+
+                                inventory.inventory_id,
+
+                                newBalance,
+
+                                requestData
+
+                            );
+
+
+                        }
+
+
+                    );
+
+
+
+                }
+
+            );
+
+
+        }
+
+
+
+
+
+
+
+
+        function createTransaction(
+
+            inventory_id,
+
+            newBalance,
+
+            requestData
+
+        ){
+
+
+
+            const sql = `
+
+                INSERT INTO inventory_transactions
+
+                (
+
+                    inventory_id,
+
+                    txn_type,
+
+                    quantity,
+
+                    balance_after,
+
+                    reference_type,
+
+                    reference_id,
+
+                    notes,
+
+                    created_by
+
+                )
+
+
+                VALUES(?,?,?,?,?,?,?,?)
+
+            `;
+
+
+
+            db.query(
+
+                sql,
+
+                [
+
+                    inventory_id,
+
+                    "OUT",
+
+                    quantity,
+
+                    newBalance,
+
+                    "DISTRIBUTION",
+
+                    distribution_id,
+
+                    "Relief distribution",
+
+                    created_by
+
+                ],
+
+
+                (err)=>{
+
+
+                    if(err)
+                        return rollback(res,err);
+
+
+
+
+                    insertDistributionItem(requestData);
+
+
+
+                }
+
+            );
+
+
+
+        }
+
+
+
+
+
+
+
+
+        function insertDistributionItem(requestData){
+
+
+
+            const sql = `
+
+                INSERT INTO distribution_items
+
+                (
+
+                    distribution_id,
+
+                    request_item_id,
+
+                    item_id,
+
+                    quantity
+
+                )
+
+
+                VALUES(?,?,?,?)
+
+            `;
+
+
+
+            db.query(
+
+                sql,
+
+                [
+
+                    distribution_id,
+
+                    request_item_id,
+
+                    item_id,
+
+                    quantity
+
+                ],
+
+
+                (err)=>{
+
+
+                    if(err)
+                        return rollback(res,err);
+
+
+
+                    updateFulfilled(requestData);
+
+
+
+                }
+
+            );
+
+
+
+        }
+
+
+
+
+
+
+
+        function updateFulfilled(requestData){
+
+
+
+            db.query(
+
+                `
+
+                UPDATE relief_request_items
+
+                SET fulfilled_qty = fulfilled_qty + ?
+
+                WHERE request_item_id=?
+
+                `,
+
+
+                [
+
+                    quantity,
+
+                    request_item_id
+
+                ],
+
+
+                (err)=>{
+
+
+                    if(err)
+                        return rollback(res,err);
+
+
+
+                    updateStatus(requestData);
+
+
+
+                }
+
+
+            );
+
+
+
+        }
+
+
+
+
+
+
+
+        function updateStatus(requestData){
+
+
+
+            const sql = `
+
+                SELECT
+
+                SUM(requested_qty) total_requested,
+
+                SUM(fulfilled_qty) total_fulfilled
+
+
+                FROM relief_request_items
+
+
+                WHERE request_id=?
+
+            `;
+
+
+
+            db.query(
+
+                sql,
+
+                [
+
+                    requestData.request_id
+
+                ],
+
+
+                (err,result)=>{
+
+
+                    if(err)
+                        return rollback(res,err);
+
+
+
+
+                    let status =
+                    "PARTIALLY_DELIVERED";
+
+
+
+
+                    if(
+
+                        Number(result[0].total_fulfilled)
+                        >=
+                        Number(result[0].total_requested)
+
+                    ){
+
+                        status="DELIVERED";
+
+                    }
+
+
+
+
+
+                    db.query(
+
+                        `
+
+                        UPDATE relief_requests
+
+                        SET status=?
+
+                        WHERE request_id=?
+
+                        `,
+
+
+                        [
+
+                            status,
+
+                            requestData.request_id
+
+                        ],
+
+
+                        (err)=>{
+
+
+                            if(err)
+                                return rollback(res,err);
+
+
+
+
+                            db.commit((err)=>{
+
+
+                                if(err)
+                                    return rollback(res,err);
+
+
+
+
+                                res.status(201).json({
+
+                                    message:
+                                    "Distribution item added successfully",
+
+                                    status
+
+                                });
+
+
+                            });
+
+
+
+                        }
+
+
+
+                    );
+
+
+
+                }
+
+
+            );
+
+
+
+        }
 
 
 
@@ -689,11 +879,8 @@ const addDistributionItem = (req, res) => {
 
 
 
-// =================================
-// ROLLBACK
-// =================================
 
-const rollback = (res,error)=>{
+const rollback=(res,error)=>{
 
 
     db.rollback(()=>{
@@ -701,9 +888,8 @@ const rollback = (res,error)=>{
 
         res.status(400).json({
 
-            message:error.message || "Operation failed",
-
-            error:error.sqlMessage || null
+            message:
+            error.message || "Operation failed"
 
         });
 
@@ -717,7 +903,7 @@ const rollback = (res,error)=>{
 
 
 
-module.exports = {
+module.exports={
 
     addDistributionItem
 

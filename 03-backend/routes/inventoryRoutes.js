@@ -15,12 +15,52 @@ const {
 
 } = require("../controllers/inventoryController");
 
-router.get("/", getInventory);
+const {
+    verifyToken
+} = require("../middleware/authMiddleware");
 
-router.get("/low-stock",getLowStock);
+const {
+    checkRole
+} = require("../middleware/roleMiddleware");
 
-router.put("/reduce", reduceInventory);
+// VIEW INVENTORY
+// ADMIN + SHELTER_MANAGER + RELIEF_MANAGER + VOLUNTEER
 
-router.post("/add",addInventory);
+router.get(
+    "/",
+    verifyToken,
+    checkRole(1,2,3,4),
+    getInventory
+);
+
+// LOW STOCK VIEW
+// ADMIN + SHELTER_MANAGER + RELIEF_MANAGER
+
+router.get(
+    "/low-stock",
+    verifyToken,
+    checkRole(1,2,3),
+    getLowStock
+);
+
+
+// ADMIN + SHELTER_MANAGER + RELIEF_MANAGER
+
+// ADD INVENTORY
+router.post(
+    "/add",
+    verifyToken,
+    checkRole(1,2,3),
+    addInventory
+);
+
+// REDUCE INVENTORY
+// ADMIN + SHELTER_MANAGER + RELIEF_MANAGER
+router.put(
+    "/reduce",
+    verifyToken,
+    checkRole(1,2,3),
+    reduceInventory
+);
 
 module.exports = router;

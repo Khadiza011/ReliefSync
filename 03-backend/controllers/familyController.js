@@ -1,35 +1,50 @@
 const db = require("../config/db");
 
 
-// Get all families
+// =================================
+// GET ALL FAMILIES
+// =================================
+
 const getAllFamilies = (req, res) => {
 
 
     const sql = `
+
         SELECT
+
             family_id,
             family_code,
             contact_phone,
             current_district,
             current_area,
             priority,
-            status
+            status,
+            registered_by,
+            registered_at
+
         FROM families
+
+        ORDER BY registered_at DESC
+
     `;
+
 
 
     db.query(sql, (err, result) => {
 
 
-        if (err) {
+        if(err){
 
             console.log(err);
 
             return res.status(500).json({
-                message: "Database error"
+
+                message:"Database error"
+
             });
 
         }
+
 
 
         res.json(result);
@@ -37,7 +52,11 @@ const getAllFamilies = (req, res) => {
 
     });
 
+
 };
+
+
+
 
 // =================================
 // CREATE FAMILY
@@ -58,7 +77,72 @@ const createFamily = (req,res)=>{
 
 
 
-    // Check duplicate family code
+    const registered_by = req.user.user_id;
+   
+
+
+    // ===============================
+    // REQUIRED FIELD VALIDATION
+    // ===============================
+
+
+    if(
+
+        !family_code ||
+        !contact_phone ||
+        !current_district ||
+        !current_area ||
+        !priority
+
+    ){
+
+        return res.status(400).json({
+
+            message:"All fields are required"
+
+        });
+
+    }
+
+ const cleanFamilyCode = family_code.trim();
+
+
+    // ===============================
+    // PRIORITY VALIDATION
+    // ===============================
+
+
+    const allowedPriority = [
+
+        "LOW",
+        "MEDIUM",
+        "HIGH",
+        "CRITICAL"
+
+    ];
+
+
+
+    if(!allowedPriority.includes(priority)){
+
+
+        return res.status(400).json({
+
+            message:"Invalid priority"
+
+        });
+
+
+    }
+
+
+
+
+
+    // ===============================
+    // CHECK DUPLICATE FAMILY CODE
+    // ===============================
+
 
     const checkSql = `
 
@@ -73,10 +157,10 @@ const createFamily = (req,res)=>{
 
 
     db.query(
-
-        checkSql,
-
-        [family_code],
+    checkSql,
+    [
+        cleanFamilyCode
+    ],
 
         (err,result)=>{
 
@@ -86,6 +170,7 @@ const createFamily = (req,res)=>{
                 return res.status(500).json({
 
                     message:"Database error",
+
                     error:err.message
 
                 });
@@ -94,9 +179,9 @@ const createFamily = (req,res)=>{
 
 
 
-            // Already exists
 
             if(result.length > 0){
+
 
                 return res.status(400).json({
 
@@ -104,27 +189,42 @@ const createFamily = (req,res)=>{
 
                 });
 
+
             }
 
 
 
-            // Insert new family
 
-            const sql = `
+
+            // ===============================
+            // INSERT FAMILY
+            // ===============================
+
+
+            const insertSql = `
+
 
                 INSERT INTO families
 
                 (
 
                     family_code,
+
                     contact_phone,
+
                     current_district,
+
                     current_area,
-                    priority
+
+                    priority,
+
+                    registered_by
 
                 )
 
-                VALUES (?,?,?,?,?)
+
+                VALUES (?,?,?,?,?,?)
+
 
             `;
 
@@ -132,17 +232,17 @@ const createFamily = (req,res)=>{
 
             db.query(
 
-                sql,
+                insertSql,
 
                 [
+    cleanFamilyCode,
+    contact_phone,
+    current_district,
+    current_area,
+    priority,
+    registered_by
+],
 
-                    family_code,
-                    contact_phone,
-                    current_district,
-                    current_area,
-                    priority
-
-                ],
 
                 (err,result)=>{
 
@@ -150,15 +250,16 @@ const createFamily = (req,res)=>{
                     if(err){
 
 
-                        // Database level duplicate protection
-
                         if(err.code === "ER_DUP_ENTRY"){
+
 
                             return res.status(400).json({
 
-                                message:"Family already registered"
+                                message:
+                                "Family already registered"
 
                             });
+
 
                         }
 
@@ -167,6 +268,7 @@ const createFamily = (req,res)=>{
                         return res.status(500).json({
 
                             message:"Database error",
+
                             error:err.message
 
                         });
@@ -176,31 +278,50 @@ const createFamily = (req,res)=>{
 
 
 
-                    res.json({
 
-                        message:"Family registered successfully",
 
-                        family_id:result.insertId
+                    res.status(201).json({
+
+
+                        message:
+                        "Family registered successfully",
+
+
+                        family_id:
+                        result.insertId,
+
+
+                        registered_by
+
 
                     });
 
 
+
                 }
+
 
             );
 
 
+
         }
+
 
     );
 
 
 };
 
+
+
+
 module.exports = {
+
 
     getAllFamilies,
 
     createFamily
+
 
 };

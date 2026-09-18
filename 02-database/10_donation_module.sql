@@ -70,7 +70,18 @@ CREATE TABLE IF NOT EXISTS donations (
         ON DELETE SET NULL
 );
 
+ALTER TABLE donations
+DROP FOREIGN KEY fk_donation_received_by;
 
+ALTER TABLE donations
+MODIFY received_by BIGINT UNSIGNED NOT NULL;
+
+ALTER TABLE donations
+
+ADD CONSTRAINT fk_donation_received_by
+FOREIGN KEY (received_by)
+REFERENCES users(user_id)
+ON DELETE RESTRICT;
 -- ============================================
 -- 3. DONATION ITEMS
 -- ============================================
@@ -96,3 +107,11 @@ CREATE TABLE IF NOT EXISTS donation_items (
         FOREIGN KEY (item_id)
         REFERENCES items(item_id)
 );
+
+ALTER TABLE donations
+MODIFY status ENUM(
+    'PENDING',
+    'RECEIVED',
+    'CANCELLED'
+)
+DEFAULT 'PENDING';
