@@ -6,7 +6,8 @@ DROP PROCEDURE IF EXISTS sp_admit_family$$
 
 CREATE PROCEDURE sp_admit_family(
     IN p_family_code VARCHAR(20),
-    IN p_shelter_code VARCHAR(20)
+    IN p_shelter_code VARCHAR(20),
+    IN p_admitted_by BIGINT UNSIGNED
 )
 BEGIN
 
@@ -15,6 +16,7 @@ BEGIN
 
     DECLARE v_family_exists INT DEFAULT 0;
     DECLARE v_shelter_exists INT DEFAULT 0;
+    DECLARE v_user_exists INT DEFAULT 0;
 
     DECLARE v_family_size INT DEFAULT 0;
 
@@ -27,8 +29,7 @@ BEGIN
     DECLARE v_active_admission_count INT DEFAULT 0;
 
 
-    -- If any SQL error occurs:
-    -- rollback everything
+    -- Rollback everything if any SQL error occurs
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
         ROLLBACK;
@@ -84,7 +85,25 @@ BEGIN
 
 
     -- ==========================================
-    -- 3. LOCK SHELTER + GET CAPACITY
+    -- 3. CHECK USER
+    -- ==========================================
+
+    SELECT COUNT(*)
+    INTO v_user_exists
+    FROM users
+    WHERE user_id = p_admitted_by;
+
+
+    IF v_user_exists = 0 THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Admitting user does not exist';
+
+    END IF;
+
+
+    -- ==========================================
+    -- 4. LOCK SHELTER + GET CAPACITY
     -- ==========================================
 
     SELECT
@@ -99,7 +118,7 @@ BEGIN
 
 
     -- ==========================================
-    -- 4. CHECK SHELTER STATUS
+    -- 5. CHECK SHELTER STATUS
     -- ==========================================
 
     IF v_operational_status <> 'OPEN' THEN
@@ -111,7 +130,7 @@ BEGIN
 
 
     -- ==========================================
-    -- 5. COUNT FAMILY MEMBERS
+    -- 6. COUNT FAMILY MEMBERS
     -- ==========================================
 
     SELECT COUNT(*)
@@ -129,7 +148,7 @@ BEGIN
 
 
     -- ==========================================
-    -- 6. CHECK EXISTING ACTIVE ADMISSION
+    -- 7. CHECK EXISTING ACTIVE ADMISSION
     -- ==========================================
 
     SELECT COUNT(*)
@@ -149,7 +168,7 @@ BEGIN
 
 
     -- ==========================================
-    -- 7. CALCULATE CURRENT OCCUPANCY
+    -- 8. CALCULATE CURRENT OCCUPANCY
     -- ==========================================
 
     SELECT
@@ -166,7 +185,7 @@ BEGIN
 
 
     -- ==========================================
-    -- 8. CHECK CAPACITY
+    -- 9. CHECK CAPACITY
     -- ==========================================
 
     IF v_family_size > v_available_capacity THEN
@@ -179,7 +198,7 @@ BEGIN
 
 
     -- ==========================================
-    -- 9. CREATE ADMISSION
+    -- 10. CREATE ADMISSION
     -- ==========================================
 
     INSERT INTO shelter_admissions
@@ -187,37 +206,40 @@ BEGIN
         family_id,
         shelter_id,
         admitted_member_count,
-        status
+        status,
+        admitted_by
     )
     VALUES
     (
         v_family_id,
         v_shelter_id,
         v_family_size,
-        'ACTIVE'
+        'ACTIVE',
+        p_admitted_by
     );
 
 
     -- ==========================================
-    -- 10. UPDATE FAMILY STATUS
+    -- 11. UPDATE FAMILY STATUS
     -- ==========================================
 
     UPDATE families
-
     SET status = 'SHELTERED'
-
     WHERE family_id = v_family_id;
 
 
     COMMIT;
 
 
-    -- SUCCESS MESSAGE
+    -- ==========================================
+    -- SUCCESS RESPONSE
+    -- ==========================================
 
     SELECT
         'Family admitted successfully' AS message,
         p_family_code AS family_code,
         p_shelter_code AS shelter_code,
+        p_admitted_by AS admitted_by,
         v_family_size AS admitted_members,
         v_available_capacity - v_family_size
             AS remaining_capacity;

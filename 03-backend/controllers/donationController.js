@@ -9,15 +9,33 @@ const createDonation = (req,res)=>{
 
 
     const {
+    shelter_id,
+    items,
+    notes
+} = req.body;
 
-        donor_id,
-        shelter_id,
-        items,
-        notes
+const user_id = req.user.user_id;
+const role_id = req.user.role_id;
 
-    } = req.body;
+let donor_id;
 
+// Donor must use their own identity
+if (role_id === 5) {
+    donor_id = user_id;
+}
 
+// Admin can create donation on behalf of a donor
+else if (role_id === 1) {
+    donor_id = req.body.donor_id;
+}else {
+        return res.status(403).json({
+            message: "You cannot create a donation"
+        });
+    }
+    
+    // =================================
+    // REQUIRED FIELD VALIDATION
+    // =================================
 
     if(
 

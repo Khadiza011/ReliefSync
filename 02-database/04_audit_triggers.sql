@@ -82,3 +82,63 @@ BEGIN
 END$$
 
 DELIMITER ;
+
+-- ============================================
+-- ADMISSION VALIDATION TRIGGERS
+-- Prevent multiple ACTIVE admissions
+-- for the same family
+-- ============================================
+
+DELIMITER $$
+
+DROP TRIGGER IF EXISTS trg_prevent_duplicate_active_admission$$
+
+CREATE TRIGGER trg_prevent_duplicate_active_admission
+BEFORE INSERT ON shelter_admissions
+FOR EACH ROW
+BEGIN
+
+    IF NEW.status = 'ACTIVE'
+       AND EXISTS (
+           SELECT 1
+           FROM shelter_admissions
+           WHERE family_id = NEW.family_id
+             AND status = 'ACTIVE'
+       )
+    THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+        'Family already has an active shelter admission';
+
+    END IF;
+
+END$$
+
+
+DROP TRIGGER IF EXISTS trg_prevent_duplicate_active_admission_update$$
+
+CREATE TRIGGER trg_prevent_duplicate_active_admission_update
+BEFORE UPDATE ON shelter_admissions
+FOR EACH ROW
+BEGIN
+
+    IF NEW.status = 'ACTIVE'
+       AND EXISTS (
+           SELECT 1
+           FROM shelter_admissions
+           WHERE family_id = NEW.family_id
+             AND status = 'ACTIVE'
+             AND admission_id <> NEW.admission_id
+       )
+    THEN
+
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT =
+        'Family already has another active shelter admission';
+
+    END IF;
+
+END$$
+
+DELIMITER ;

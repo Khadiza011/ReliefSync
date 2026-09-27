@@ -21,6 +21,10 @@ const reliefRequestItemRoutes = require("./routes/reliefRequestItemRoutes");
 const authRoutes = require("./routes/authRoutes");
 const shelterAdmissionRoutes = require("./routes/shelterAdmissionRoutes");
 const donationRoutes = require("./routes/donationRoutes");
+const dashboardRoutes = require("./routes/dashboardRoutes");
+const alertsRoutes = require("./routes/alertsRoutes");
+const auditLogRoutes = require("./routes/auditLogRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 
 const app = express();
@@ -57,6 +61,10 @@ app.use( "/api/request-items", reliefRequestItemRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/admissions",shelterAdmissionRoutes);
 app.use("/api/donations", donationRoutes);
+app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/alerts", alertsRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
+app.use("/api/reports", reportRoutes);
 
 const PORT = process.env.PORT || 5000;
 
