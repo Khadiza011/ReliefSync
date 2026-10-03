@@ -1,0 +1,157 @@
+/* ==========================================================================
+   ReliefSync design tokens
+   One source of truth for color, type, spacing, radius, elevation & motion.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;
+  --text-sm: 0.8125rem;
+  --text-base: 0.875rem;
+  --text-md: 0.9375rem;
+  --text-lg: 1.0625rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.375rem;
+
+  /* Canvas */
+  --bg-0: #04070f;
+  --bg-1: #070c18;
+  --bg-2: #0a1222;
+
+  /* Surfaces */
+  --surface-1: #0c1424;
+  --surface-2: #101a2e;
+  --surface-3: #15213a;
+  --surface-hover: rgba(148, 186, 255, 0.05);
+  --surface-active: rgba(34, 211, 238, 0.08);
+  --glass: rgba(13, 21, 38, 0.66);
+  --glass-strong: rgba(11, 18, 33, 0.86);
+  --glass-highlight: linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 40%);
+
+  /* Borders */
+  --border-1: rgba(148, 176, 220, 0.09);
+  --border-2: rgba(148, 176, 220, 0.15);
+  --border-3: rgba(148, 176, 220, 0.26);
+
+  /* Text */
+  --text-1: #eaf1fb;
+  --text-2: #a9b6cc;
+  --text-3: #74839c;
+  --text-4: #4f5d75;
+  --text-on-accent: #031018;
+
+  /* Brand */
+  --cyan-300: #67e8f9;
+  --cyan-400: #22d3ee;
+  --cyan-500: #06b6d4;
+  --teal-400: #2dd4bf;
+  --blue-400: #60a5fa;
+  --blue-500: #3b82f6;
+  --indigo-400: #818cf8;
+  --indigo-500: #6366f1;
+
+  --accent: var(--cyan-400);
+  --accent-strong: #0ea5c6;
+  --accent-soft: rgba(34, 211, 238, 0.11);
+  --accent-ring: rgba(34, 211, 238, 0.38);
+
+  --gradient-brand: linear-gradient(135deg, #22d3ee 0%, #3b82f6 55%, #6366f1 100%);
+  --gradient-accent: linear-gradient(135deg, #2dd4bf 0%, #22d3ee 45%, #3b82f6 100%);
+  --gradient-text: linear-gradient(110deg, #e6fbff 0%, #67e8f9 38%, #60a5fa 70%, #a5b4fc 100%);
+  --gradient-border: linear-gradient(135deg, rgba(34, 211, 238, 0.5), rgba(99, 102, 241, 0.15) 50%, rgba(34, 211, 238, 0.05));
+
+  /* Status (always paired with icon + label, never color alone) */
+  --success: #34d399;
+  --success-soft: rgba(52, 211, 153, 0.12);
+  --warning: #fbbf24;
+  --warning-soft: rgba(251, 191, 36, 0.12);
+  --serious: #fb923c;
+  --serious-soft: rgba(251, 146, 60, 0.12);
+  --danger: #f87171;
+  --danger-soft: rgba(248, 113, 113, 0.12);
+  --info: #60a5fa;
+  --info-soft: rgba(96, 165, 250, 0.12);
+  --violet: #a78bfa;
+  --violet-soft: rgba(167, 139, 250, 0.12);
+
+  /* Data-viz (validated: CVD-safe on the dark surface, fixed order) */
+  --series-1: #1d9bc4;
+  --series-2: #d95926;
+  --series-3: #8d7fe8;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --seq-1: #184f95;
+  --seq-2: #256abf;
+  --seq-3: #3987e5;
+  --seq-4: #6da7ec;
+  --chart-grid: rgba(148, 176, 220, 0.07);
+  --chart-axis: rgba(148, 176, 220, 0.2);
+  --chart-track: rgba(148, 176, 220, 0.08);
+
+  /* Role identity */
+  --role-admin: #22d3ee;
+  --role-shelter: #34d399;
+  --role-relief: #818cf8;
+  --role-volunteer: #fbbf24;
+  --role-donor: #f472b6;
+
+  /* Spacing (4px grid) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+  --space-24: 96px;
+
+  /* Radius */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+  --radius-full: 999px;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 30px 70px -24px rgba(0, 0, 0, 0.75);
+  --shadow-inset: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --shadow-glow: 0 0 0 1px rgba(34, 211, 238, 0.22), 0 10px 34px -8px rgba(34, 211, 238, 0.42);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+  --dur-3: 320ms;
+  --dur-4: 500ms;
+
+  /* Layout */
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 76px;
+  --topbar-h: 64px;
+  --content-max: 1480px;
+
+  /* Layers */
+  --z-sticky: 20;
+  --z-sidebar: 40;
+  --z-overlay: 60;
+  --z-modal: 70;
+  --z-toast: 90;
+}
