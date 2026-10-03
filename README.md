@@ -1,239 +1,677 @@
 # ReliefSync — Disaster Relief Management System
 
-ReliefSync is a web application for disaster relief coordination. It manages shelters, families, inventory, relief requests, donations, distributions and volunteers, with a separate workspace for each user role.
+> A full-stack, role-based disaster relief coordination platform for managing shelters, displaced families, admissions, inventory, relief requests, distributions, donations, volunteers, medical support, audit history, and operational notifications from one place.
 
-| Part     | Technology                                              |
-| -------- | ------------------------------------------------------- |
-| Frontend | React 19 + Vite (runs on **http://localhost:3000**)     |
-| Backend  | Node.js + Express REST API with JWT login (port **5000**) |
-| Database | MySQL / MariaDB (XAMPP)                                 |
+ReliefSync was built to model the workflow of a real emergency response operation rather than act as a simple CRUD dashboard. The system connects shelter capacity, family admissions, stock movement, relief requests, donations, volunteer assignments, medical support, approvals, and audit logging so that an action in one module updates the rest of the system consistently.
 
-```
-ReliefSync-Final
-|
-|-- backend      REST API (Node.js + Express)
-|-- frontend     Web app (React + Vite)
-|-- database     reliefsync.sql  (complete schema + demo data)
-|-- README.md    this guide
+---
+
+## Overview
+
+During a disaster, relief information quickly becomes fragmented: families need shelter, shelters need supplies, managers need approvals, volunteers need assignments, donors need a clear contribution flow, and administrators need visibility over everything happening in the system.
+
+**ReliefSync brings those workflows together in one role-aware platform.**
+
+Each user sees a workspace tailored to their responsibilities:
+
+- **Admin** — system-wide command center, users, shelters, volunteers, audit logs, medical teams, approvals and oversight
+- **Shelter Manager** — own-shelter families, admissions, inventory, donations, distributions and relief requests
+- **Relief Manager** — request approval, dispatch, distribution and operational coordination
+- **Volunteer** — assigned shelter, tasks, skills, stock visibility and low-stock reporting
+- **Donor** — donation creation, donation history and status tracking
+
+---
+
+## Highlights
+
+- Role-based dashboards and navigation
+- JWT authentication and server-side role authorization
+- Shelter capacity and occupancy tracking
+- Family registration, family members, admission and discharge workflows
+- Admission-aware family-member limits
+- Inventory stock-in / stock-out with transaction history
+- Brand-new inventory item creation with reorder levels
+- Volunteer low-stock reporting to the assigned Shelter Manager
+- Relief request approval and multi-stage / partial fulfillment
+- Distribution tracking with stock deduction
+- Donation submission, receipt and inventory integration
+- Volunteer registration approval, skill management and shelter/task assignments
+- Volunteer task completion and assigned-shelter family visibility
+- Medical support requests, team assignment and completion workflow
+- Medical team workload control — teams become **BUSY** at the active-case limit
+- Admin-created shelters, staff accounts and medical teams
+- Profile and password management for every role
+- Account-deletion workflow with Admin approval for staff/volunteers
+- Donor self-service account deletion
+- Recipient-focused notifications
+- Search, filters, status badges, drawers/modals and export actions
+- Responsive role-aware interface
+- Centralized audit logging for important system activity
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 19, Vite, React Router, Axios |
+| UI | Custom CSS, Lucide React icons, Framer Motion |
+| Backend | Node.js, Express 5 |
+| Authentication | JWT + bcrypt |
+| Database | MySQL / MariaDB |
+| Database Access | mysql2 connection pool |
+| Local Development | XAMPP / phpMyAdmin |
+| API Style | REST |
+
+### Default local ports
+
+| Service | Address |
+| --- | --- |
+| Frontend | `http://localhost:3000` |
+| Backend API | `http://localhost:5000` |
+| phpMyAdmin | `http://localhost/phpmyadmin` |
+
+---
+
+## Project Structure
+
+```text
+ReliefSync-Final/
+│
+├── backend/
+│   ├── config/            # Database configuration
+│   ├── controllers/       # Application/business logic
+│   ├── middleware/        # JWT + role authorization
+│   ├── routes/            # REST API routes
+│   ├── scripts/           # Utility scripts
+│   ├── utils/             # Shared backend helpers
+│   ├── .env.example
+│   ├── package.json
+│   └── server.js
+│
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/    # Reusable UI and layout components
+│   │   ├── context/       # Auth / toast state
+│   │   ├── hooks/
+│   │   ├── layouts/
+│   │   ├── pages/         # Dashboards + feature pages
+│   │   ├── routes/
+│   │   ├── services/      # API clients
+│   │   └── utils/
+│   ├── package.json
+│   └── vite.config.js
+│
+├── database/
+│   ├── reliefsync.sql
+│   ├── 27_inventory_stock_reports.sql
+│   └── 29_account_deletion_requests.sql
+│
+└── README.md
 ```
 
 ---
 
-## Step 1 — Install requirements
+## Core Modules
 
-Install these once on your computer:
+### 1. Authentication & Role-Based Access
 
-1. **Node.js 18 or newer** (LTS recommended): https://nodejs.org
-   Check it in a terminal:
-   ```bash
-   node -v
-   ```
-   ```bash
-   npm -v
-   ```
-2. **XAMPP** (includes MySQL/MariaDB and phpMyAdmin): https://www.apachefriends.org
+ReliefSync uses JWT authentication. Protected API routes validate both the token and the user's role on the server.
 
-> You don't need anything else. The `node_modules` folders aren't included; `npm install` downloads them in Steps 3 and 4. This needs an internet connection the first time.
+Public self-registration is available for:
+
+- Volunteer
+- Donor
+
+Administrative/staff accounts such as Admin, Shelter Manager and Relief Manager are created by an Admin.
+
+A newly registered Volunteer must be approved before gaining normal access.
+
+### 2. Family Management
+
+The system supports:
+
+- Registering affected families
+- Priority and location tracking
+- Family-member records
+- Viewing members from family and shelter views
+- Limiting recorded members to the admitted-member count
+- Admin removal of invalid family/member records
+
+### 3. Shelter Admissions
+
+Admissions connect families directly to shelters.
+
+When a family is admitted:
+
+- an admission record is created
+- family status becomes **SHELTERED**
+- shelter occupancy increases
+- duplicate active admission is prevented
+- the event is captured in audit history
+
+When discharged:
+
+- admission becomes **DISCHARGED**
+- discharge time is recorded
+- shelter occupancy decreases
+- family status is updated appropriately
+
+### 4. Shelter Management
+
+Admins can create new shelters with capacity, location and type information.
+
+Shelter Managers operate only on their assigned shelter. Their relevant admissions, requests, donations and distributions are filtered server-side.
+
+### 5. Inventory Management
+
+Inventory is tracked per shelter and per item.
+
+Supported operations include:
+
+- Add stock
+- Reduce / issue stock
+- Create a new inventory item
+- Set a reorder level
+- Detect low stock
+- Record inventory transactions
+
+Inventory movements caused by donations and distributions are also reflected in shelter inventory.
+
+### 6. Volunteer Low-Stock Reports
+
+A Volunteer assigned to a shelter can report low or empty stock items.
+
+Flow:
+
+```text
+Volunteer notices low stock
+        ↓
+Report sent for assigned shelter
+        ↓
+Shelter Manager sees the report
+        ↓
+Manager acknowledges the report
+```
+
+Duplicate open reports for the same stock line are prevented.
+
+### 7. Relief Requests
+
+Shelter operations can create relief requests with multiple requested items.
+
+The workflow supports:
+
+```text
+PENDING
+   ↓
+APPROVED
+   ↓
+PARTIALLY_DELIVERED
+   ↓
+DELIVERED
+```
+
+A partially fulfilled request remains dispatchable until every requested line has been fulfilled.
+
+### 8. Distributions
+
+Approved relief requests can be dispatched to shelters.
+
+A distribution:
+
+- records the destination shelter
+- records dispatched items and quantities
+- deducts inventory
+- contributes toward each request item's fulfilled quantity
+- updates request status based on actual item-level fulfillment
+
+### 9. Donations
+
+Donors can create donations and track their status.
+
+When an authorized manager receives a donation:
+
+- donation status updates
+- donated quantities are added to the receiving shelter inventory
+- the stock movement is recorded
+
+### 10. Volunteer Management
+
+Admins / authorized managers can:
+
+- review Volunteer registrations
+- approve Volunteers
+- view availability and skills
+- assign Volunteers to a shelter task
+
+Volunteers can:
+
+- update their own skills
+- see their assigned shelter
+- view shelter families and members
+- view assignments
+- mark active tasks complete
+- inspect shelter inventory
+- report low stock
+
+### 11. Medical Support
+
+The Medical module supports:
+
+- creating medical-support requests
+- adding Medical Teams
+- assigning a team and/or eligible Volunteer
+- reassigning support
+- marking assigned medical support as completed
+- maintaining medical support history
+
+Medical teams have workload-aware availability. A team with **5 active cases** becomes **BUSY** and cannot accept another case until an active case is completed.
+
+### 12. User & Profile Management
+
+Every signed-in user can manage their own profile and password.
+
+Admins can:
+
+- view all users
+- create staff/users
+- activate/deactivate accounts
+- assign Shelter Managers to shelters
+- review account-deletion requests
+
+### 13. Account Deletion Workflow
+
+Account removal preserves historical operational records through safe account closure rather than deleting dependent history.
+
+- **Donor:** can delete their own account directly after password confirmation
+- **Admin / Shelter Manager / Relief Manager / Volunteer:** submits an account-deletion request
+- access is paused while the request is pending
+- an Admin can approve or reject the request
+- an Admin cannot approve their own deletion request
+
+### 14. Notifications
+
+Notifications are role-aware and recipient-focused.
+
+A user does **not** receive a notification for their own action. Instead, the notification area surfaces relevant events that require or inform that user, such as:
+
+- approval requests
+- new assignments
+- low-stock reports
+- donation updates
+- medical-support attention
+- account-deletion requests
+
+### 15. Audit Logs
+
+Important system events are written to `audit_logs`, including administrative actions and operational changes such as user creation, shelter creation, medical-team creation and admission-related activity.
+
+Audit Logs are available to Admin users for system oversight.
 
 ---
 
-## Step 2 — Import the database
+## Database Design
 
-1. Open the **XAMPP Control Panel** and click **Start** for **Apache** and **MySQL**.
-2. Open **http://localhost/phpmyadmin** in your browser.
-3. Click the **Import** tab at the top. Do not select a database first; the file creates one.
-4. Click **Choose File**, pick `database/reliefsync.sql`, then click **Import** (or **Go**) at the bottom.
-5. A database named **`reliefsync`** now appears on the left with 36 tables and views. These include:
-   - accounts: `users`, `roles`, `shelter_managers`
-   - shelters and people: `shelters`, `families`, `shelter_admissions`
-   - supplies: `items`, `shelter_inventory`, `inventory_transactions`
-   - relief work: `relief_requests`, `relief_request_items`, `distributions`, `distribution_items`
-   - donations: `donors`, `donations`, `donation_items`
-   - volunteers: `volunteers`, `assignments`, `audit_logs`, and more
+The base schema contains **36 tables/views**, covering users, roles, shelters, families, inventory, donations, requests, distributions, medical support, Volunteers and audit history.
 
-> **Already have an old `reliefsync` database?** Select it in phpMyAdmin → **Operations** → **Drop the database**, then import again. Older copies are missing tables, such as `shelter_managers`.
+Key relationships include:
 
-**Command-line alternative** (from the project folder):
+```text
+users ─────────────── roles
+  │
+  ├── shelter_managers ─── shelters
+  ├── volunteers ───────── assignments
+  └── donors ───────────── donations
+
+families ── family_members
+   │
+   └── shelter_admissions ── shelters
+
+shelters ── shelter_inventory ── items
+                           │
+                           └── inventory_transactions
+
+relief_requests ── relief_request_items
+       │
+       └── distributions ── distribution_items
+
+medical_requests ── medical_assignments ── medical_teams
+```
+
+Two additional migration files extend the final project with:
+
+- `inventory_stock_reports`
+- `account_deletion_requests`
+- `users.deleted_at`
+
+---
+
+# Getting Started
+
+## Prerequisites
+
+Install:
+
+- **Node.js 18+**
+- **npm**
+- **XAMPP** or another MySQL/MariaDB server
+
+Verify Node.js and npm:
+
 ```bash
-mysql -u root -p < database/reliefsync.sql
+node -v
+npm -v
 ```
-(Press Enter at the password prompt if root has no password, which is the XAMPP default.)
 
 ---
 
-## Step 3 — Start the backend
+## 1. Clone the Repository
 
-Open a terminal **in the `backend` folder**.
-
-1. Create your settings file from the example.
-   - Windows:
-     ```bash
-     copy .env.example .env
-     ```
-   - Mac/Linux:
-     ```bash
-     cp .env.example .env
-     ```
-2. Open `.env` and check the values:
-
-   | Setting       | What to put                                                             |
-   | ------------- | ----------------------------------------------------------------------- |
-   | `DB_HOST`     | `localhost` (leave as is for XAMPP)                                     |
-   | `DB_USER`     | `root` (XAMPP default)                                                  |
-   | `DB_PASSWORD` | **empty** for XAMPP. Fill it in only if your MySQL root user has a password. |
-   | `DB_NAME`     | `reliefsync` (leave as is)                                              |
-   | `DB_PORT`     | `3306` (leave as is)                                                    |
-   | `PORT`        | `5000` (leave as is)                                                    |
-   | `JWT_SECRET`  | Any long random text, for example `my-team-secret-2026-x9k2`            |
-
-3. Install the dependencies:
-   ```bash
-   npm install
-   ```
-4. Start the API:
-   ```bash
-   npm start
-   ```
-
-You should see:
+```bash
+git clone <your-repository-url>
+cd ReliefSync-Final
 ```
-Server running on port 5000
-Database connected successfully (pool)
+
+---
+
+## 2. Set Up the Database
+
+Start **Apache** and **MySQL** from XAMPP, then open:
+
+```text
+http://localhost/phpmyadmin
 ```
-Keep this terminal open. To check it, open http://localhost:5000 in a browser; it shows **"ReliefSync Backend Running"**.
+
+### Import the main database
+
+Import:
+
+```text
+database/reliefsync.sql
+```
+
+This creates the `reliefsync` database with the main schema and demo data.
+
+### Run the final migrations
+
+After importing `reliefsync.sql`, select the `reliefsync` database in phpMyAdmin and run these files **in this order**:
+
+```text
+database/27_inventory_stock_reports.sql
+database/29_account_deletion_requests.sql
+```
+
+These are required for the final project's stock-reporting and account-deletion features.
+
+> If you are starting from an older copy of the database, using a fresh import is recommended to avoid schema mismatch.
 
 ---
 
-## Step 4 — Start the frontend
+## 3. Configure the Backend
 
-Open a **second** terminal **in the `frontend` folder**.
+Open a terminal in:
 
-1. Install the dependencies:
-   ```bash
-   npm install
-   ```
-2. Start the web app:
-   ```bash
-   npm run dev
-   ```
+```text
+backend/
+```
 
-Open **http://localhost:3000**. You'll see the ReliefSync landing page.
+Create `.env` from `.env.example`.
 
-> The frontend needs no `.env` file during development; it forwards `/api` calls to the backend on port 5000 automatically. `frontend/.env.example` matters only for the production build (`npm run build`).
+### Windows
+
+```bash
+copy .env.example .env
+```
+
+### macOS / Linux
+
+```bash
+cp .env.example .env
+```
+
+Default development configuration:
+
+```env
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=reliefsync
+DB_PORT=3306
+PORT=5000
+JWT_SECRET=replace-this-with-a-long-random-secret
+```
+
+Install dependencies:
+
+```bash
+npm install
+```
+
+Start the backend:
+
+```bash
+npm start
+```
+
+Expected address:
+
+```text
+http://localhost:5000
+```
+
+Opening it in a browser should display:
+
+```text
+ReliefSync Backend Running
+```
 
 ---
 
-## Step 5 — Log in
+## 4. Start the Frontend
 
-Click **Sign in** (or go to http://localhost:3000/login) and use one of the default accounts:
+Open another terminal in:
 
-| Role            | Email                      | Password        | Lands on            |
-| --------------- | -------------------------- | --------------- | ------------------- |
-| **Admin**           | `admin@reliefsync.com`     | `Admin@123`     | Command Center `/admin` |
-| **Shelter Manager** | `manager@reliefsync.com`   | `Manager@123`   | Shelter Operations `/shelter-manager` |
-| **Relief Manager**  | `relief@reliefsync.com`    | `Relief@123`    | Relief Operations `/relief-manager` |
-| **Volunteer**       | `volunteer@reliefsync.com` | `Volunteer@123` | Volunteer Hub `/volunteer` |
-| **Donor**           | `donor@reliefsync.com`     | `Donor@123`     | Donor Hub `/donor` |
+```text
+frontend/
+```
 
-Extra demo accounts in the data: `admin@test.com` / `Admin@123`, `admin@sync.com` / `Admin@123`, and `volunteer@test.com` / `Volunteer@123`.
+Install dependencies:
 
-- New **volunteer** and **donor** accounts can sign up at **/register**. Staff accounts (admin and managers) can't self-register.
-- To change any password later, run this in the `backend` folder:
-  ```bash
-  npm run set-password -- <email> <new-password>
-  ```
-- Sign out from the sidebar (bottom) or the user menu (top right).
+```bash
+npm install
+```
+
+Start Vite:
+
+```bash
+npm run dev
+```
+
+Open:
+
+```text
+http://localhost:3000
+```
+
+During development, Vite proxies `/api` requests to the backend on port `5000`.
 
 ---
 
-## Step 6 — Test every role
+# Demo Accounts
 
-Sign out between roles. Every action below writes to the database, so you'll see your changes immediately.
+Click **Sign in** or open:
 
-### Admin — `admin@reliefsync.com`
-1. The **Command Center** shows KPI cards, an activity chart, the request pipeline, the approval queue, recent activity, shelter occupancy and low-stock alerts.
-2. In **Approval queue**, click **Approve** on a request → confirm → a toast appears, and the queue and sidebar badge update.
-3. Press **Ctrl + K** (or click the search box) → type `family` → **Register a family** → fill in the form → **Register family**.
-4. **Families** → click **Admit** on a family → choose **Feni School Shelter** → **Admit family**.
-5. **Relief Requests** → use the tabs, search and **Export**. Click a row to see item progress in the side panel.
-6. On an **Approved** request click **Dispatch** → quantities are pre-filled → **Dispatch now**. Check **Inventory**: the stock went down.
-7. **Inventory** → **Add stock** / the issue (−) button on a row.
-8. **Donations** → **Receive** on the pending donation `DON-DEMO-0003` → **Inventory** shows the new blankets and water at Feni School Shelter.
-9. **Audit Logs** → table and timeline views.
-10. **Users** → **Add user** (a Shelter Manager must be given a shelter), **Shelter** button to move a manager to another shelter, **Deactivate / Activate** to lock or unlock an account (a deactivated user is signed out immediately).
-11. **Volunteers** → approve newly registered volunteers (they stay inactive until approved) and assign them to a shelter task.
-12. **Shelters** → click a shelter → the side panel lists the families currently admitted there, with their members.
-13. **Families** → click a family → remove a wrong member, or **Remove family** (admin only; the shelter places are released).
-14. **Admissions** → click an active admission → **Discharge family** (frees the places; the family becomes *Relocated*).
-15. **Profile settings** (top-right menu) → change your name, phone, email and password.
+```text
+http://localhost:3000/login
+```
 
-### Shelter Manager — `manager@reliefsync.com`
-1. The dashboard shows **Your shelter** (Feni Central Shelter) with occupancy, your requests, and families needing shelter.
-2. **New request** (top right) → add 2 items (e.g. Rice 50, Oral Saline 20) → **Submit request**.
-3. **Register family** → fill in the form → it appears in **Families**.
-4. **Inventory** shows only your shelter's stock (and **Add stock** can also create a brand-new item). The Shelter Manager can't approve requests, and the button isn't shown.
-5. Everything you see — requests, admissions, donations, distributions, low-stock alerts — is limited to the shelter you manage.
-6. Open a family → **Add member**. You can only record as many members as were admitted; once the limit is reached the button is disabled.
-7. **Medical** → raise a medical request for a family.
+Use any of the following default accounts:
 
-### Relief Manager — `relief@reliefsync.com`
-1. **Approval queue**: approve the request the Shelter Manager just created.
-2. **Ready to dispatch** → **Dispatch** → **Dispatch now**.
-3. **Donations to receive** → **Receive**.
+| Role | Email | Password | Workspace |
+| --- | --- | --- | --- |
+| **Admin** | `admin@reliefsync.com` | `Admin@123` | Command Center `/admin` |
+| **Shelter Manager** | `manager@reliefsync.com` | `Manager@123` | Shelter Operations `/shelter-manager` |
+| **Relief Manager** | `relief@reliefsync.com` | `Relief@123` | Relief Operations `/relief-manager` |
+| **Volunteer** | `volunteer@reliefsync.com` | `Volunteer@123` | Volunteer Hub `/volunteer` |
+| **Donor** | `donor@reliefsync.com` | `Donor@123` | Donor Hub `/donor` |
 
-### Volunteer — `volunteer@reliefsync.com`
-0. A new volunteer who registers from the sign-up page cannot sign in until an Admin approves them (**Volunteers → Approve**).
-1. **Volunteer profile** shows skills (First Aid, Food Distribution) and availability.
-2. **Your assignments** lists the active task "Distribute food packs" and one completed task.
-3. **Supplies at your shelters** shows the Feni Central Shelter stock (read-only).
-4. **My shelter** lists the admitted families and members; on **My assignments** press **Mark completed** when a task is done.
-5. **Profile settings** → pick your skills and save.
+> These credentials are intended for local/demo use only. Change seeded passwords and `JWT_SECRET` before any real deployment.
 
-### Donor — `donor@reliefsync.com`
-1. **Your donations** lists `DON-DEMO-0003`, with its status (Pending, or Received after a manager receives it).
-2. **Make a donation** → choose a shelter, add items → **Submit donation**. A Relief Manager or Admin can then receive it.
+---
 
-### Security checks
-- Log in as Volunteer and open http://localhost:3000/audit-logs → you're sent back to your own workspace.
-- Enter a wrong password → "Invalid email or password".
-- Open a page that doesn't exist (e.g. `/abc`) → a 404 page appears.
-- Make the browser window narrow (phone size) → the menu becomes a slide-out drawer and tables turn into cards.
+## Recommended Demo Flow
+
+For a quick demonstration of how the modules connect:
+
+1. Sign in as **Shelter Manager** and create a relief request.
+2. Sign in as **Relief Manager** or **Admin** and approve it.
+3. Dispatch part of the requested quantity.
+4. Observe the request become **Partially Delivered**.
+5. Dispatch the remaining quantity and observe it become **Delivered**.
+6. Check Inventory to see stock deductions and transaction history.
+7. Sign in as **Volunteer**, open the assigned shelter and inspect families / assignments.
+8. Report a low-stock item.
+9. Sign in as **Shelter Manager** and acknowledge the Volunteer stock report.
+10. Create or assign a medical-support request and complete it.
+11. Open **Audit Logs** as Admin to review recorded activity.
+
+---
+
+## Role Capability Matrix
+
+| Capability | Admin | Shelter Manager | Relief Manager | Volunteer | Donor |
+| --- | :---: | :---: | :---: | :---: | :---: |
+| System dashboard | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Manage users | ✓ | — | — | — | — |
+| Add shelters | ✓ | — | — | — | — |
+| Families | ✓ | ✓ | ✓ | View assigned shelter | — |
+| Admissions | ✓ | Own shelter | View | — | — |
+| Inventory | ✓ | Own shelter | ✓ | Read assigned shelter | — |
+| Low-stock reporting | — | Acknowledge | — | Report | — |
+| Relief requests | ✓ | Create for own shelter | Approve/manage | — | — |
+| Distributions | ✓ | Own shelter view | ✓ | — | — |
+| Donations | ✓ | Own shelter | ✓ | — | Create/view own |
+| Volunteer management | ✓ | — | ✓ | Own profile/tasks | — |
+| Medical support | ✓ | Create/view | Manage | Assigned support | — |
+| Add medical teams | ✓ | — | — | — | — |
+| Audit logs | ✓ | — | — | — | — |
+
+---
+
+## Security & Data Integrity
+
+ReliefSync includes several safeguards beyond UI-level restrictions:
+
+- JWT-protected API routes
+- Server-side role authorization
+- bcrypt password hashing
+- Account-status validation
+- Role-based and shelter-based data filtering
+- Database transactions for critical multi-step operations
+- Duplicate active-admission prevention
+- Shelter-capacity checks before admission
+- Item-level relief fulfillment validation
+- Medical-team workload validation
+- Volunteer assignment validation
+- Safe account deletion / soft deletion to preserve historical foreign-key relationships
+- Audit logging for important operations
+
+---
+
+## Useful Commands
+
+| Folder | Command | Purpose |
+| --- | --- | --- |
+| `backend` | `npm start` | Start Express API |
+| `backend` | `npm run set-password -- <email> <password>` | Reset a user's password |
+| `frontend` | `npm run dev` | Start Vite development server |
+| `frontend` | `npm run build` | Create production build |
+| `frontend` | `npm run preview` | Preview production build |
+| `frontend` | `npm run lint` | Run ESLint |
 
 ---
 
 ## Troubleshooting
 
-| Problem | Solution |
+| Problem | What to check |
 | --- | --- |
-| Frontend says **"Cannot reach the ReliefSync server"** | The backend isn't running. Do Step 3 and keep that terminal open. |
-| Backend shows **`Database connection failed`** | Start MySQL in XAMPP. Check `DB_PASSWORD` / `DB_NAME` in `backend/.env`. |
-| **`ER_BAD_DB_ERROR: Unknown database 'reliefsync'`** | The database isn't imported. Do Step 2. |
-| **`Table 'reliefsync.shelter_managers' doesn't exist`** | You have an old database. Drop it and import `database/reliefsync.sql` again. |
-| **Port 5000 or 3000 already in use** | Close the other program, or change `PORT` in `backend/.env` and `server.port` / `proxy.target` in `frontend/vite.config.js`. |
-| **Login fails for a default account** | The database was imported from another file. Re-import `database/reliefsync.sql`, or run `npm run set-password -- <email> <password>` in `backend`. |
-| `npm install` shows **"install-scripts" / "allowScripts" warnings** about `bcrypt` | Safe to ignore. bcrypt ships prebuilt binaries for Windows, Mac and Linux, and it works without running its install script. |
-| `npm install` errors | Use Node.js 18 or newer, check your internet connection, then delete the `node_modules` folder and run `npm install` again. |
-| **"Session expired"** message | Login tokens last 1 day. Sign in again. |
+| Frontend cannot reach the server | Confirm backend is running on port `5000` |
+| Database connection failed | Start MySQL and verify `backend/.env` |
+| `Unknown database 'reliefsync'` | Import `database/reliefsync.sql` |
+| Stock-report feature errors | Run `27_inventory_stock_reports.sql` |
+| Account-deletion feature errors | Run `29_account_deletion_requests.sql` |
+| `MODULE_NOT_FOUND` for a project utility | Confirm all backend folders/files were copied, including `backend/utils/` |
+| Default login fails | Re-import demo DB or reset password with the backend script |
+| Port `3000` / `5000` already in use | Close the conflicting process or change project configuration |
+| Session expired | Sign in again; JWT sessions are time-limited |
 
 ---
 
-## Useful commands
+## API Areas
 
-| Where      | Command                                 | Purpose                                  |
-| ---------- | --------------------------------------- | ---------------------------------------- |
-| `backend`  | `npm start`                             | Run the API on port 5000                 |
-| `backend`  | `npm run set-password -- <email> <pw>`  | Reset a user's password                  |
-| `frontend` | `npm run dev`                           | Run the web app on port 3000             |
-| `frontend` | `npm run build`                         | Create a production build in `frontend/dist` |
-| `frontend` | `npm run preview`                       | Serve the production build (port 4173)   |
-| `frontend` | `npm run lint`                          | Check code quality                       |
+The backend exposes REST endpoints under `/api`, including:
 
-## Project notes
-- Every API request (except login and register) needs a JWT. Each endpoint also checks the user's role on the server.
-- Stock movements (distributions, donations received, add/issue stock) run inside database transactions and are recorded in `inventory_transactions`.
-- Admitting a family updates shelter occupancy and status (and the family becomes *Sheltered*) inside one transaction; the `trg_admission_after_insert` trigger records the audit entry. A family cannot be admitted twice while it has an active stay.
-- A relief request becomes *Partially delivered* until every line is fulfilled; further distributions are allowed until it is *Delivered*.
-- Accounts can be deactivated by an admin; the API checks the account status on every request, so existing sessions stop working at once.
-- Known limitations:
-  - The Shelters API is read-only, so shelters are viewed, not edited.
-  - The Offline-sync API module isn't used by the web app yet.
+```text
+/api/auth
+/api/users
+/api/shelters
+/api/families
+/api/admissions
+/api/inventory
+/api/requests
+/api/request-items
+/api/distributions
+/api/distribution-items
+/api/donations
+/api/volunteers
+/api/medical
+/api/dashboard
+/api/audit-logs
+/api/disasters
+/api/sync
+```
+
+---
+
+## Design Philosophy
+
+ReliefSync focuses on three ideas:
+
+**1. One operational source of truth**  
+Actions such as admissions, distributions and donations update the related records instead of living as isolated entries.
+
+**2. The right information for the right role**  
+Users see only the modules and operational data relevant to their responsibilities.
+
+**3. Traceable relief operations**  
+Critical actions are reflected through statuses, transaction history, notifications and audit logs.
+
+---
+
+## Future Improvements
+
+Potential next steps include:
+
+- deployment with Docker / cloud hosting
+- email or SMS notifications
+- maps and geospatial shelter visualization
+- richer disaster-area analytics
+- file/image attachments for reports
+- offline synchronization for field teams
+- automated testing and CI/CD
+- advanced reporting dashboards
+
+---
+
+## Disclaimer
+
+ReliefSync is an academic / demonstration disaster-relief management project. It should be security-reviewed, tested and hardened before use with real emergency-response or personally sensitive data.
+
+---
+
+<p align="center">
+  <strong>ReliefSync</strong><br/>
+  Coordinating people, shelters and supplies when every action matters.
+</p>
